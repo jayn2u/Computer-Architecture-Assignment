@@ -1,3 +1,10 @@
 # ninja log v6
-2	239	1729745687046421448	CMakeFiles/ComputerArchitecture.dir/main.c.o	bda0790a27f40958
-239	364	1729745687283715194	ComputerArchitecture	2543a690e747a2b9
+256	396	1730356868203859033	ComputerArchitecture	84fd99eef99f3a1a
+11	256	1730356867959432265	CMakeFiles/ComputerArchitecture.dir/main.c.o	ee163b76c75a6828
+8	96	1730357525805280731	build.ninja	4fcc27ffd4997857
+6	255	1730357525822213703	CMakeFiles/ComputerArchitecture.dir/main.c.o	ee163b76c75a6828
+255	401	1730357526070930099	ComputerArchitecture	84fd99eef99f3a1a
+4	236	1730357717841627827	CMakeFiles/ComputerArchitecture.dir/main.c.o	ee163b76c75a6828
+236	353	1730357718073320417	ComputerArchitecture	84fd99eef99f3a1a
+10	274	1730358695306887425	CMakeFiles/ComputerArchitecture.dir/main.c.o	ee163b76c75a6828
+274	416	1730358695570752020	ComputerArchitecture	84fd99eef99f3a1a
