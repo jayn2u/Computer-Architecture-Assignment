@@ -1,2 +1,4 @@
 *.o
 *.trace
+
+temp.s

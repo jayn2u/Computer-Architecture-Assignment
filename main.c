@@ -42,24 +42,72 @@ typedef struct {
 } UJ_Instruction;
 
 R_Instruction r_instructions[] = {
-    {"ADD", 0x33, 0x0, 0x00},
-    {"SUB", 0x33, 0x0, 0x20},
-    {"SLL", 0x33, 0x1, 0x00},
-    {"XOR", 0x33, 0x4, 0x00},
-    {"SRL", 0x33, 0x5, 0x00},
-    {"SRA", 0x33, 0x5, 0x20},
-    {"OR", 0x33, 0x6, 0x00},
-    {"AND", 0x33, 0x7, 0x00}
+    {"ADD", 0x33, 0x0, 0x00}, // Addition
+    {"SUB", 0x33, 0x0, 0x20}, // Subtraction
+    {"SLL", 0x33, 0x1, 0x00}, // Shift Left Logical
+    {"XOR", 0x33, 0x4, 0x00}, // XOR (Exclusive OR)
+    {"SRL", 0x33, 0x5, 0x00}, // Shift Right Logical
+    {"SRA", 0x33, 0x5, 0x20}, // Shift Right Arithmetic
+    {"OR", 0x33, 0x6, 0x00}, // OR (Logical OR)
+    {"AND", 0x33, 0x7, 0x00} // AND (Logical AND)
 };
 
-// Utility function to find the instruction by name
-R_Instruction *find_instruction(const char *name) {
+I_Instruction i_instructions[] = {
+    {"ADDI", 0x13, 0x0}, // Add Immediate
+    {"XORI", 0x13, 0x4}, // XOR Immediate
+    {"ORI", 0x13, 0x6}, // OR Immediate
+    {"ANDI", 0x13, 0x7}, // AND Immediate
+    {"SLLI", 0x13, 0x1}, // Shift Left Logical Immediate
+    {"SRLI", 0x13, 0x5}, // Shift Right Logical Immediate
+    {"SRAI", 0x13, 0x5}, // Shift Right Arithmetic Immediate
+    {"LW", 0x03, 0x2}, // Load Word
+    {"JALR", 0x67, 0x0} // Jump And Link Register
+};
+
+S_Instruction s_instructions = {"SW", 0x23, 0x2}; // Store Word
+
+SB_Instruction sb_instructions[] = {
+    {"BEQ", 0x63, 0x0}, // Branch if Equal
+    {"BNE", 0x63, 0x1}, // Branch if Not Equal
+    {"BLT", 0x63, 0x4}, // Branch if Less Than
+    {"BGE", 0x63, 0x5} // Branch if Greater or Equal
+};
+
+UJ_Instruction uj_instructions = {"JAL", 0x6F}; // Jump and Link
+
+R_Instruction *find_r_instruction(const char *name) {
     for (int i = 0; i < sizeof(r_instructions) / sizeof(R_Instruction); i++) {
         if (strcasecmp(name, r_instructions[i].name) == 0) {
             return &r_instructions[i];
         }
     }
     return NULL;
+}
+
+I_Instruction *find_i_instruction(const char *name) {
+    for (int i = 0; i < sizeof(i_instructions) / sizeof(I_Instruction); i++) {
+        if (strcasecmp(name, i_instructions[i].name) == 0) {
+            return &i_instructions[i];
+        }
+    }
+    return NULL;
+}
+
+S_Instruction *find_s_instruction(const char *name) {
+    return &s_instructions;
+}
+
+SB_Instruction *find_sb_instruction(const char *name) {
+    for (int i = 0; i < sizeof(sb_instructions) / sizeof(SB_Instruction); i++) {
+        if (strcasecmp(name, sb_instructions[i].name) == 0) {
+            return &sb_instructions[i];
+        }
+    }
+    return NULL;
+}
+
+UJ_Instruction *find_uj_instruction(const char *name) {
+    return &uj_instructions;
 }
 
 // Encode R-type instruction
@@ -71,7 +119,7 @@ unsigned int encode_r_type(const unsigned int funct7, const unsigned int rs2, co
 
 // Encode I-type instruction
 unsigned int encode_i_type(const unsigned int imm, const unsigned int rs1, const unsigned int funct3,
-                           const unsigned int rd, const int opcode) {
+                           const unsigned int rd, const unsigned int opcode) {
     return (imm << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode;
 }
 
@@ -127,43 +175,31 @@ void process_file(const char *filename) {
 
     while (fgets(line, sizeof(line), input_file)) {
         char instruction_name[10];
-        unsigned int rd, rs1, rs2;
-        sscanf(line, "%s x%u, x%u, x%u", instruction_name, &rd, &rs1, &rs2);
-        R_Instruction *r_instr = find_instruction(instruction_name);
-
-        if (r_instr == NULL) {
-            printf("Syntax Error!!\n");
-            fclose(output);
-            fclose(trace);
-            fclose(input_file);
-            return;
-        }
-
+        unsigned int rd, rs1, rs2, imm;
         unsigned int machine_code = 0;
 
-        // Determine the instruction type and encode accordingly
-        if (strcasecmp(instruction_name, "ADD") == 0
-            || strcasecmp(instruction_name, "SUB") == 0
-            || strcasecmp(instruction_name, "SLL") == 0
-            || strcasecmp(instruction_name, "XOR") == 0
-            || strcasecmp(instruction_name, "SRL") == 0
-            || strcasecmp(instruction_name, "SRA") == 0
-            || strcasecmp(instruction_name, "OR") == 0
-            || strcasecmp(instruction_name, "AND") == 0) {
-            // Case for R-type
-            machine_code = encode_r_type(
-                r_instr->funct7,
-                rs2,
-                rs1,
-                r_instr->funct3,
-                rd,
-                r_instr->opcode);
-        }
-        // TODO: Add cases for other types: I_TYPE, S_TYPE, SB_TYPE, U_TYPE, UJ_TYPE
+        // TODO: 어셈블러 명령어가 정확히 해당 형식을 따르지 않을 수도 있음. 조건에 맞추어 설계.
 
-        // TODO: Handle EXIT instruction
-        if (strcmp(instruction_name, "EXIT") == 0) {
-            machine_code = EXIT_CODE;
+        if (sscanf(line, "%s x%u, x%u, x%u", instruction_name, &rd, &rs1, &rs2) == 4) {
+            const R_Instruction *r_instr = find_r_instruction(instruction_name);
+            machine_code = encode_r_type(r_instr->funct7, rs2, rs1, r_instr->funct3, rd, r_instr->opcode);
+        } else if (sscanf(line, "%s x%u, x%u, %u", instruction_name, &rd, &rs1, &imm) == 4) {
+            const I_Instruction *i_instr = find_i_instruction(instruction_name);
+            machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
+        } else if (sscanf(line, "%s x%u, %u(x%u)", instruction_name, &rd, &imm, &rs1) == 4) {
+            const I_Instruction *i_instr = find_i_instruction(instruction_name);
+            machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
+        } else if (sscanf(line, "%s x%u, %u(x%u)", instruction_name, &rs2, &imm, &rs1) == 4) {
+            const S_Instruction *s_instr = find_s_instruction(instruction_name);
+            // TODO: imm를 이진수로 표현했을 때, 범위를 지정해서 서로 다른 두 변수에 지정하는 방법 연구
+        } else if (sscanf(line, "%s x%u, x%u, &imm", instruction_name, &rs1, &rs2, &imm) == 4) {
+            const SB_Instruction *sb_instr = find_sb_instruction(instruction_name);
+            // TODO: imm를 이진수로 표현했을 때, 범위를 지정해서 서로 다른 두 변수에 지정하는 방법 연구
+        } else if (sscanf(line, "%s x%u, x%u", instruction_name, &rd, &imm) == 4) {
+            const UJ_Instruction *uj_instr = find_uj_instruction(instruction_name);
+            machine_code = encode_uj_type(imm, rd, uj_instr->opcode);
+        } else {
+            // TODO: 잘못된 형식의 명령어를 읽어올 때 처리
         }
 
         // Write machine code and PC to files
