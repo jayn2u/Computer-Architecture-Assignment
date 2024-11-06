@@ -57,9 +57,12 @@ I_Instruction i_instructions[] = {
     {"XORI", 0x13, 0x4}, // XOR Immediate
     {"ORI", 0x13, 0x6}, // OR Immediate
     {"ANDI", 0x13, 0x7}, // AND Immediate
+
+    // TODO: SLLI, SRLI, SRAI instruction have func7...?
     {"SLLI", 0x13, 0x1}, // Shift Left Logical Immediate
     {"SRLI", 0x13, 0x5}, // Shift Right Logical Immediate
     {"SRAI", 0x13, 0x5}, // Shift Right Arithmetic Immediate
+
     {"LW", 0x03, 0x2}, // Load Word
     {"JALR", 0x67, 0x0} // Jump And Link Register
 };
@@ -154,6 +157,15 @@ void print_binary_to_file(unsigned int n, FILE *file) {
     fprintf(file, "\n");
 }
 
+// S type 명령어에서 imm를 분리
+void parse_imm_for_s_type_inst(const unsigned int imm, unsigned int *imm1, unsigned int *imm2) {
+    // imm1에는 상위 비트 imm[11:5] 저장
+    *imm1 = (imm >> 5) & 0x7F; // 0x7F는 7비트 마스크로, imm[11:5] 추출
+
+    // imm2에는 하위 비트 imm[4:0] 저장
+    *imm2 = imm & 0x1F; // 0x1F는 5비트 마스크로, imm[4:0] 추출
+}
+
 // Add other encoding functions for S-type, SB-type, U-type, and UJ-type
 void process_file(const char *filename) {
     FILE *input_file = fopen(filename, "r");
@@ -177,27 +189,54 @@ void process_file(const char *filename) {
 
     while (fgets(line, sizeof(line), input_file)) {
         char instruction_name[10];
-        unsigned int rd, rs1, rs2, imm;
+        unsigned int rd = 0, rs1 = 0, rs2 = 0, imm = 0;
         unsigned int machine_code = 0;
 
-        // TODO: 어셈블러 명령어가 정확히 해당 형식을 따르지 않을 수도 있음. 조건에 맞추어 설계.
-
+        // operation rd, rs1, rs2 format instruction -> R type
         if (sscanf(line, "%s x%u, x%u, x%u", instruction_name, &rd, &rs1, &rs2) == 4) {
             const R_Instruction *r_instr = find_r_instruction(instruction_name);
             machine_code = encode_r_type(r_instr->funct7, rs2, rs1, r_instr->funct3, rd, r_instr->opcode);
-        } else if (sscanf(line, "%s x%u, x%u, %u", instruction_name, &rd, &rs1, &imm) == 4) {
+        }
+
+        // operation rd, rs1, imm12 format instruction -> I type with immediate instruction
+        else if (sscanf(line, "%s x%u, x%u, %u", instruction_name, &rd, &rs1, &imm) == 4) {
             const I_Instruction *i_instr = find_i_instruction(instruction_name);
             machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
-        } else if (sscanf(line, "%s x%u, %u(x%u)", instruction_name, &rd, &imm, &rs1) == 4) {
-            const I_Instruction *i_instr = find_i_instruction(instruction_name);
-            machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
-        } else if (sscanf(line, "%s x%u, %u(x%u)", instruction_name, &rs2, &imm, &rs1) == 4) {
-            const S_Instruction *s_instr = find_s_instruction(instruction_name);
-            // TODO: imm를 이진수로 표현했을 때, 범위를 지정해서 서로 다른 두 변수에 지정하는 방법 연구
-        } else if (sscanf(line, "%s x%u, x%u, &imm", instruction_name, &rs1, &rs2, &imm) == 4) {
+        }
+
+        // operation rd, imm12(rs1) format instruction -> I type with load instruction
+        // operation rs2, imm12(rs1) format instruction -> S type with store instruction
+        else if (sscanf(line, "%s x%u, %u(x%u)", instruction_name, &rd, &imm, &rs1) == 4) {
+            int result = strcasecmp(instruction_name, "LW"); // compare does instruction is LW
+
+            if (result == 0) {
+                // LW case
+                const I_Instruction *i_instr = find_i_instruction(instruction_name); // return only LW instruction
+                machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
+            } else {
+                // SW case
+                const S_Instruction *s_instr = find_s_instruction(instruction_name); // return only SW instruction
+
+                unsigned int imm1; // imm[11:5]
+                unsigned int imm2; // imm[4:0]
+
+                parse_imm_for_s_type_inst(imm, &imm1, &imm2); // parse imm into two individual imm variables
+
+                rs2 = rd; // SW instruction doesn't use rd
+
+                machine_code = encode_s_type(imm1, rs2, rs1, s_instr->funct3, imm2, s_instr->opcode);
+            }
+        }
+
+        // operation rs1, rs2, imm12 format instruction -> SB type
+        else if (sscanf(line, "%s x%u, x%u, &imm", instruction_name, &rs1, &rs2, &imm) == 4) {
             const SB_Instruction *sb_instr = find_sb_instruction(instruction_name);
-            // TODO: imm를 이진수로 표현했을 때, 범위를 지정해서 서로 다른 두 변수에 지정하는 방법 연구
-        } else if (sscanf(line, "%s x%u, x%u", instruction_name, &rd, &imm) == 4) {
+            // TODO: imm를 이진수로 표현했을 때, imm를 imm1 & imm2로 분리하는 코드를 작성
+            // TODO: 라벨로 오는 항목들을 어떻게 명령어로 변환할 지 연구
+        }
+
+        // operation rd, imm20 format instruction -> UJ type
+        else if (sscanf(line, "%s x%u, x%u", instruction_name, &rd, &imm) == 4) {
             const UJ_Instruction *uj_instr = find_uj_instruction(instruction_name);
             machine_code = encode_uj_type(imm, rd, uj_instr->opcode);
         } else {
