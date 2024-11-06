@@ -164,8 +164,10 @@ void process_file(const char *filename) {
 
     char output_file[MAX_LINE_LENGTH];
     char trace_file[MAX_LINE_LENGTH];
-    snprintf(output_file, sizeof(output_file), "%s.o", filename);
-    snprintf(trace_file, sizeof(trace_file), "%s.trace", filename);
+    char filename_without_extension[MAX_LINE_LENGTH];
+    sscanf(filename, "%[^.]", filename_without_extension);
+    snprintf(output_file, sizeof(output_file), "%s.o", filename_without_extension);
+    snprintf(trace_file, sizeof(trace_file), "%s.trace", filename_without_extension);
 
     FILE *output = fopen(output_file, "w");
     FILE *trace = fopen(trace_file, "w");
