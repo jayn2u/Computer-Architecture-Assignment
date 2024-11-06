@@ -22,6 +22,7 @@ typedef struct {
     char name[10];
     unsigned int opcode;
     unsigned int funct3;
+    unsigned int funct7; // funct7 추가
 } I_Instruction;
 
 typedef struct {
@@ -53,18 +54,15 @@ R_Instruction r_instructions[] = {
 };
 
 I_Instruction i_instructions[] = {
-    {"ADDI", 0x13, 0x0}, // Add Immediate
-    {"XORI", 0x13, 0x4}, // XOR Immediate
-    {"ORI", 0x13, 0x6}, // OR Immediate
-    {"ANDI", 0x13, 0x7}, // AND Immediate
-
-    // TODO: SLLI, SRLI, SRAI instruction have func7...?
-    {"SLLI", 0x13, 0x1}, // Shift Left Logical Immediate
-    {"SRLI", 0x13, 0x5}, // Shift Right Logical Immediate
-    {"SRAI", 0x13, 0x5}, // Shift Right Arithmetic Immediate
-
-    {"LW", 0x03, 0x2}, // Load Word
-    {"JALR", 0x67, 0x0} // Jump And Link Register
+    {"ADDI", 0x13, 0x0, 0}, // Add Immediate
+    {"XORI", 0x13, 0x4, 0}, // XOR Immediate
+    {"ORI", 0x13, 0x6, 0}, // OR Immediate
+    {"ANDI", 0x13, 0x7, 0}, // AND Immediate
+    {"SLLI", 0x13, 0x1, 0x00}, // Shift Left Logical Immediate (funct7 = 0x00)
+    {"SRLI", 0x13, 0x5, 0x00}, // Shift Right Logical Immediate (funct7 = 0x00)
+    {"SRAI", 0x13, 0x5, 0x20}, // Shift Right Arithmetic Immediate (funct7 = 0x20)
+    {"LW", 0x03, 0x2, 0}, // Load Word
+    {"JALR", 0x67, 0x0, 0} // Jump And Link Register
 };
 
 S_Instruction s_instructions = {"SW", 0x23, 0x2}; // Store Word
@@ -166,6 +164,15 @@ void parse_imm_for_s_type_inst(const unsigned int imm, unsigned int *imm1, unsig
     *imm2 = imm & 0x1F; // 0x1F는 5비트 마스크로, imm[4:0] 추출
 }
 
+// SB 타입 명령어에서 imm을 분리하는 함수
+void parse_imm_for_sb_type_inst(const unsigned int imm, unsigned int *imm1, unsigned int *imm2) {
+    // imm1에는 imm[12]와 imm[10:5]를 저장
+    *imm1 = ((imm >> 5) & 0x3F) | ((imm >> 12) & 0x1) << 6; // 6비트와 1비트를 결합하여 imm[12:5] 추출
+
+    // imm2에는 imm[4:1]과 imm[11]을 저장
+    *imm2 = (imm & 0x1E) | ((imm >> 11) & 0x1); // 4비트와 1비트를 결합하여 imm[4:1]과 imm[11] 추출
+}
+
 // Add other encoding functions for S-type, SB-type, U-type, and UJ-type
 void process_file(const char *filename) {
     FILE *input_file = fopen(filename, "r");
@@ -199,9 +206,21 @@ void process_file(const char *filename) {
         }
 
         // operation rd, rs1, imm12 format instruction -> I type with immediate instruction
+        // operation rd, rs1, shamt format instruction -> SLLI & SRLI & SRAI intruction only
         else if (sscanf(line, "%s x%u, x%u, %u", instruction_name, &rd, &rs1, &imm) == 4) {
-            const I_Instruction *i_instr = find_i_instruction(instruction_name);
-            machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
+            // In the case of SLLI & SRLI & SRAI, use funct7 with shamt
+            if (strcasecmp(instruction_name, "SLLI") == 0 || strcasecmp(instruction_name, "SRLI") == 0 || strcasecmp(
+                    instruction_name, "SRAI") == 0) {
+                unsigned int shamt = imm; // Specify into shamt
+
+                const I_Instruction *i_instr = find_i_instruction(instruction_name);
+
+                machine_code = encode_i_type((i_instr->funct7 << 5) | shamt, rs1, i_instr->funct3, rd,
+                                             i_instr->opcode);
+            } else {
+                const I_Instruction *i_instr = find_i_instruction(instruction_name);
+                machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
+            }
         }
 
         // operation rd, imm12(rs1) format instruction -> I type with load instruction
@@ -222,16 +241,21 @@ void process_file(const char *filename) {
 
                 parse_imm_for_s_type_inst(imm, &imm1, &imm2); // parse imm into two individual imm variables
 
-                rs2 = rd; // SW instruction doesn't use rd
+                rs2 = rd; // SW instruction doesn't use rd. Change into rs2.
 
                 machine_code = encode_s_type(imm1, rs2, rs1, s_instr->funct3, imm2, s_instr->opcode);
             }
         }
 
         // operation rs1, rs2, imm12 format instruction -> SB type
-        else if (sscanf(line, "%s x%u, x%u, &imm", instruction_name, &rs1, &rs2, &imm) == 4) {
+        else if (sscanf(line, "%s x%u, x%u, %u", instruction_name, &rs1, &rs2, &imm) == 4) {
             const SB_Instruction *sb_instr = find_sb_instruction(instruction_name);
-            // TODO: imm를 이진수로 표현했을 때, imm를 imm1 & imm2로 분리하는 코드를 작성
+
+            unsigned int imm1; // imm[12:10-5]
+            unsigned int imm2; // imm[4-0:11]
+
+            parse_imm_for_sb_type_inst(imm, &imm1, &imm2);
+
             // TODO: 라벨로 오는 항목들을 어떻게 명령어로 변환할 지 연구
         }
 
