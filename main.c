@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -176,6 +177,8 @@ void parse_imm_for_sb_type_inst(const unsigned int imm, unsigned int *imm1, unsi
 // Add other encoding functions for S-type, SB-type, U-type, and UJ-type
 void process_file(const char *filename) {
     FILE *input_file = fopen(filename, "r");
+
+
     if (!input_file) {
         printf("Input file does not exist!!\n");
         return;
@@ -284,10 +287,21 @@ void process_file(const char *filename) {
 
 int main() {
     char filename[MAX_LINE_LENGTH];
-    printf("Enter Input File Name: ");
-    scanf("%s", filename);
+    int check_terminate = 0;
 
-    process_file(filename);
+    while (true) {
+        printf("Enter Input File Name: ");
+        scanf("%s", filename);
+
+        check_terminate = strcasecmp("terminate", filename);
+
+        if (check_terminate == 0) {
+            break;
+        }
+
+        process_file(filename);
+    }
+
 
     return 0;
 }
