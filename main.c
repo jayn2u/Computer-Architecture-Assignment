@@ -43,6 +43,14 @@ typedef struct {
     unsigned int opcode;
 } UJ_Instruction;
 
+typedef struct {
+    char name[MAX_LINE_LENGTH];
+    unsigned int address;
+} Label;
+
+Label labels[100]; // 레이블 저장 배열
+int label_count = 0;
+
 R_Instruction r_instructions[] = {
     {"ADD", 0x33, 0x0, 0x00}, // Addition
     {"SUB", 0x33, 0x0, 0x20}, // Subtraction
@@ -82,10 +90,13 @@ UJ_Instruction uj_instructions = {"JAL", 0x6F}; // Jump and Link
 unsigned int registers[32];
 
 void initialize_registers() {
-    for (int i = 0; i < 7; i++) {
+    // x0는 항상 0
+    registers[0] = 0;
+    // x1~x6는 1,2,3,4,5,6으로 초기화
+    for (int i = 1; i <= 6; i++) {
         registers[i] = i;
     }
-
+    // 나머지 레지스터는 0으로 초기화
     for (int i = 7; i < 32; i++) {
         registers[i] = 0;
     }
@@ -514,7 +525,7 @@ void process_file(const char *filename) {
 
             parse_imm_for_sb_type_inst(imm, &imm1, &imm2);
 
-            // TODO: 라벨로 오는 항목들을 어떻게 명령어로 변환할 지 연구
+            // TODO: 라벨을 imm 값으롤 변경해야 함
         }
 
         // operation rd, imm20 format instruction -> UJ type
@@ -523,24 +534,30 @@ void process_file(const char *filename) {
             machine_code = encode_uj_type(imm, rd, uj_instr->opcode);
         }
 
-        // TODO: handle when meet label
+        // label case
+        else if (sscanf(line, "%[^:]", jump_label_name) == 1) {
+            // TODO: 라벨 라인일 때
+        }
 
-
-        // rest of the case
+        // rest of the case. might be blank line.
         else {
-            // TODO: 잘못된 형식의 명령어를 읽어올 때 처리
+            continue;
         }
 
         // Write machine code in output file
 
-        // FIXME: 명령어 확인을 위한 디버깅용 처리 코드 -> 삭제 요망
-        fprintf(output, "%s", line);
-        print_binary_to_file(machine_code, output);
+        // process_file 함수 내부
+        if (machine_code == EXIT_CODE) {
+            print_binary_to_file(0xFFFFFFFF, output);
+            fprintf(trace, "%u\n", pc);
+        } else {
+            print_binary_to_file(machine_code, output);
 
-        // Write pc in trace file
-        fprintf(trace, "%u\n", pc);
+            // Write pc in trace file
+            fprintf(trace, "%u\n", pc);
 
-        pc += 4; // Increment PC by 4 for each instruction
+            pc += 4; // Increment PC by 4 for each instruction
+        }
     }
 
     fclose(input_file);
