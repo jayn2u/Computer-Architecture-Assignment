@@ -187,11 +187,6 @@ void execute_r_type(const R_Instruction *instr, const unsigned int rd, const uns
                 registers[rd] = registers[rs1] - registers[rs2];
             }
 
-            // Should Never Happen
-            else {
-                abort();
-            }
-
             break;
 
         // Case for SLL
@@ -217,11 +212,6 @@ void execute_r_type(const R_Instruction *instr, const unsigned int rd, const uns
             // Case for SRA
             else if (instr->funct7 == 0x20) {
                 registers[rd] = registers[rs1] >> registers[rs2];
-            }
-
-            // Should Never Happen
-            else {
-                abort();
             }
 
             break;
@@ -305,11 +295,6 @@ void execute_i_type(const I_Instruction *instr, const unsigned int rd, const uns
                     registers[rd] = registers[rs1] >> shamt;
                 }
 
-                // Should Never Happen
-                else {
-                    abort();
-                }
-
                 break;
         }
     }
@@ -324,11 +309,6 @@ void execute_i_type(const I_Instruction *instr, const unsigned int rd, const uns
             default:
                 break;
         }
-    }
-
-    // Should Never Happen
-    else {
-        abort();
     }
 }
 
@@ -348,7 +328,6 @@ void execute_s_type(const S_Instruction *instr, const unsigned int rs2, const un
         } else {
             // 메모리 범위 초과 에러 처리
             printf("Memory access error: address out of bounds\n");
-            abort();
         }
     }
 }
@@ -380,7 +359,7 @@ void execute_sb_type(const SB_Instruction *instr, const unsigned int rs1, const 
 
         default:
             printf("Invalid branch instruction funct3\n");
-            abort();
+        // abort();
     }
 
     // 분기가 성공하면 PC를 업데이트
@@ -537,6 +516,7 @@ void process_file(const char *filename) {
         // label case
         else if (sscanf(line, "%[^:]", jump_label_name) == 1) {
             // TODO: 라벨 라인일 때
+            continue;
         }
 
         // rest of the case. might be blank line.
