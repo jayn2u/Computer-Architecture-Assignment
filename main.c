@@ -586,6 +586,13 @@ void process_file(const char *filename) {
             machine_code = encode_uj_type(imm, rd, uj_instr->opcode);
         }
 
+        // EXIT
+        else if (sscanf(line, "%s", instruction_name) == 1) {
+            if (strcasecmp(instruction_name, "EXIT") == 0) {
+                machine_code = EXIT_CODE;
+            }
+        }
+
         // rest of the case. might be blank line and label
         else {
             continue;
