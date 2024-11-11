@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,7 +11,10 @@
 #define EXIT_CODE 0xFFFFFFFF // 종료 기계어 명령어
 
 #define MEMORY_SIZE 1024  // 4KB 메모리
-unsigned int memory[MEMORY_SIZE]; // 메모리 공간
+
+#define LABEL_SIZE 5000 // 가능한 레이블 개수 최댓값
+
+unsigned int memory[MEMORY_SIZE]; // 가상 메모리 공간
 
 typedef struct {
     char name[10];
@@ -102,7 +106,11 @@ void initialize_registers() {
     }
 }
 
+// =====================================================================================================================
+//
 // Instruction Select Functions
+//
+// =====================================================================================================================
 
 R_Instruction *find_r_instruction(const char *name) {
     for (int i = 0; i < sizeof(r_instructions) / sizeof(R_Instruction); i++) {
@@ -139,6 +147,12 @@ UJ_Instruction *find_uj_instruction(const char *name) {
     return &uj_instructions;
 }
 
+// =====================================================================================================================
+//
+// 각 타입의 기계어 명령어로 인코딩하는 코드
+//
+// =====================================================================================================================
+
 // Encode R-type instruction
 unsigned int encode_r_type(const unsigned int funct7, const unsigned int rs2, const unsigned int rs1,
                            const unsigned int funct3,
@@ -170,6 +184,12 @@ unsigned int encode_sb_type(const unsigned int imm2, const unsigned int rs2, con
 unsigned int encode_uj_type(const unsigned int imm, const unsigned int rd, const unsigned int opcode) {
     return (imm << 12) | (rd << 7) | opcode;
 }
+
+// =====================================================================================================================
+//
+// 각 타입에 맞게 동작을 구현한 코드
+//
+// =====================================================================================================================
 
 // Execution functions for R type instruction
 void execute_r_type(const R_Instruction *instr, const unsigned int rd, const unsigned int rs1, const unsigned int rs2) {
@@ -359,7 +379,6 @@ void execute_sb_type(const SB_Instruction *instr, const unsigned int rs1, const 
 
         default:
             printf("Invalid branch instruction funct3\n");
-        // abort();
     }
 
     // 분기가 성공하면 PC를 업데이트
@@ -372,8 +391,11 @@ void execute_sb_type(const SB_Instruction *instr, const unsigned int rs1, const 
     }
 }
 
-
-// Execution functions for SB type instruction
+// =====================================================================================================================
+//
+// Utility 성격을 가지는 코드
+//
+// =====================================================================================================================
 
 // Binary instruction으로 파일에 쓰기 위함
 void print_binary_to_file(unsigned int n, FILE *file) {
@@ -396,13 +418,58 @@ void parse_imm_for_s_type_inst(const unsigned int imm, unsigned int *imm1, unsig
     *imm2 = imm & 0x1F; // 0x1F는 5비트 마스크로, imm[4:0] 추출
 }
 
-// SB 타입 명령어에서 imm을 분리하는 함수
+// SB 타입 명령어에서 imm을 분리
 void parse_imm_for_sb_type_inst(const unsigned int imm, unsigned int *imm1, unsigned int *imm2) {
     // imm1에는 imm[12]와 imm[10:5]를 저장
     *imm1 = ((imm >> 5) & 0x3F) | ((imm >> 12) & 0x1) << 6; // 6비트와 1비트를 결합하여 imm[12:5] 추출
 
     // imm2에는 imm[4:1]과 imm[11]을 저장
     *imm2 = (imm & 0x1E) | ((imm >> 11) & 0x1); // 4비트와 1비트를 결합하여 imm[4:1]과 imm[11] 추출
+}
+
+// =====================================================================================================================
+//
+// 핵심 동작을 수행하는 함수
+//
+// =====================================================================================================================
+
+void record_label(const char *filename) {
+    FILE *input_file = fopen(filename, "r");
+
+    if (!input_file) {
+        printf("Input file does not exist!!\n");
+        return;
+    }
+
+    char line[MAX_LINE_LENGTH];
+    unsigned int pc = STARTING_PC;
+
+    while (fgets(line, sizeof(line), input_file)) {
+        char *line_ptr = line;
+
+        // 앞쪽 공백 제거
+        while (isspace(*line_ptr)) line_ptr++;
+        if (*line_ptr == '\0' || *line_ptr == '\n') continue; // 빈 줄은 건너뜀
+
+        // 라인이 레이블인지 확인
+        char *colon_ptr = strchr(line_ptr, ':');
+        if (colon_ptr) {
+            // 레이블임
+            size_t label_len = colon_ptr - line_ptr;
+            char label_name[MAX_LINE_LENGTH];
+            strncpy(label_name, line_ptr, label_len);
+            label_name[label_len] = '\0';
+
+            // 레이블 이름과 현재 pc를 labels[] 배열에 저장
+            strcpy(labels[label_count].name, label_name);
+            labels[label_count].address = pc;
+            label_count++;
+        } else {
+            pc += 4;
+        }
+    }
+
+    fclose(input_file);
 }
 
 // Add other encoding functions for S-type, SB-type, U-type, and UJ-type
@@ -433,14 +500,19 @@ void process_file(const char *filename) {
         unsigned int rd = 0, rs1 = 0, rs2 = 0, imm = 0;
         unsigned int machine_code = 0;
 
-        // operation rd, rs1, rs2 format instruction -> R type
+        if (sscanf(line, "%[^:]", jump_label_name) == 1) {
+            // FIXME: 디버깅용, 필요 없을 시 제거
+            printf("Jump label: %s\n", jump_label_name);
+            continue;
+        }
+
         if (sscanf(line, "%s x%u, x%u, x%u", instruction_name, &rd, &rs1, &rs2) == 4) {
             const R_Instruction *r_instr = find_r_instruction(instruction_name);
             machine_code = encode_r_type(r_instr->funct7, rs2, rs1, r_instr->funct3, rd, r_instr->opcode);
         }
 
         // operation rd, rs1, imm12 format instruction -> I type with immediate instruction
-        // operation rd, rs1, shamt format instruction -> SLLI & SRLI & SRAI intruction only
+        // operation rd, rs1, shamt format instruction -> SLLI & SRLI & SRAI instruction only
         // I 타입 명령어 처리 - immediate 값을 사용하는 경우
         else if (sscanf(line, "%s x%u, x%u, %u", instruction_name, &rd, &rs1, &imm) == 4) {
             const I_Instruction *i_instr = find_i_instruction(instruction_name);
@@ -448,7 +520,6 @@ void process_file(const char *filename) {
             // JALR 명령어 처리
             if (strcasecmp(instruction_name, "JALR") == 0) {
                 machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
-                execute_i_type(i_instr, rd, rs1, imm, &pc);
             }
             // 다른 I-type 명령어들 처리
             else {
@@ -466,7 +537,6 @@ void process_file(const char *filename) {
                 } else {
                     machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
                 }
-                execute_i_type(i_instr, rd, rs1, imm, &pc);
             }
         }
 
@@ -502,9 +572,11 @@ void process_file(const char *filename) {
             unsigned int imm1; // imm[12:10-5]
             unsigned int imm2; // imm[4-0:11]
 
+            // FIXME: imm에는 current pc와 target pc의 차이값이 들어가야 한다.
             parse_imm_for_sb_type_inst(imm, &imm1, &imm2);
 
-            // TODO: 라벨을 imm 값으롤 변경해야 함
+            // TODO: SB 타입 인코딩하는 함수
+            machine_code = encode_sb_type(imm1, rs2, rs1, sb_instr->funct3, imm2, sb_instr->opcode);
         }
 
         // operation rd, imm20 format instruction -> UJ type
@@ -513,22 +585,14 @@ void process_file(const char *filename) {
             machine_code = encode_uj_type(imm, rd, uj_instr->opcode);
         }
 
-        // label case
-        else if (sscanf(line, "%[^:]", jump_label_name) == 1) {
-            // TODO: 라벨 라인일 때
-            continue;
-        }
-
         // rest of the case. might be blank line.
         else {
             continue;
         }
 
         // Write machine code in output file
-
-        // process_file 함수 내부
         if (machine_code == EXIT_CODE) {
-            print_binary_to_file(0xFFFFFFFF, output);
+            print_binary_to_file(EXIT_CODE, output);
             fprintf(trace, "%u\n", pc);
         } else {
             print_binary_to_file(machine_code, output);
@@ -549,12 +613,12 @@ void process_file(const char *filename) {
 }
 
 int main() {
-    char filename[MAX_LINE_LENGTH];
     int check_terminate = 0;
 
     initialize_registers();
 
     while (true) {
+        char filename[MAX_LINE_LENGTH];
         printf("Enter Input File Name: ");
         scanf("%s", filename);
 
@@ -564,9 +628,9 @@ int main() {
             break;
         }
 
+        record_label(filename);
         process_file(filename);
     }
-
 
     return 0;
 }
