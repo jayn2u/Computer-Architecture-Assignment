@@ -3,14 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-// 사용자에게서 입력받는 파일이름 크기 최댓값
-#define MAX_LINE_LENGTH 100
+#define MAX_LINE_LENGTH 50 // 사용자에게서 입력받는 파일이름 크기 최댓값
 
-// 시작 PC 주소
-#define STARTING_PC 1000
+#define STARTING_PC 1000 // 시작 PC 주소
 
-// 종료 기계어 명령어
-#define EXIT_CODE 0xFFFFFFFF
+#define EXIT_CODE 0xFFFFFFFF // 종료 기계어 명령어
+
+#define MEMORY_SIZE 1024  // 4KB 메모리
+unsigned int memory[MEMORY_SIZE]; // 메모리 공간
 
 typedef struct {
     char name[10];
@@ -76,6 +76,22 @@ SB_Instruction sb_instructions[] = {
 };
 
 UJ_Instruction uj_instructions = {"JAL", 0x6F}; // Jump and Link
+
+// Setting Registers
+
+unsigned int registers[32];
+
+void initialize_registers() {
+    for (int i = 0; i < 7; i++) {
+        registers[i] = i;
+    }
+
+    for (int i = 7; i < 32; i++) {
+        registers[i] = 0;
+    }
+}
+
+// Instruction Select Functions
 
 R_Instruction *find_r_instruction(const char *name) {
     for (int i = 0; i < sizeof(r_instructions) / sizeof(R_Instruction); i++) {
@@ -144,6 +160,231 @@ unsigned int encode_uj_type(const unsigned int imm, const unsigned int rd, const
     return (imm << 12) | (rd << 7) | opcode;
 }
 
+// Execution functions for R type instruction
+void execute_r_type(const R_Instruction *instr, const unsigned int rd, const unsigned int rs1, const unsigned int rs2) {
+    switch (instr->funct3) {
+        // Case for ADD and SUB
+        case 0x0:
+
+            // Case for ADD
+            if (instr->funct7 == 0x0) {
+                registers[rd] = registers[rs1] + registers[rs2];
+            }
+
+            // Case for SUB
+            else if (instr->funct7 == 0x20) {
+                registers[rd] = registers[rs1] - registers[rs2];
+            }
+
+            // Should Never Happen
+            else {
+                abort();
+            }
+
+            break;
+
+        // Case for SLL
+        case 0x1:
+            registers[rd] = registers[rs1] << registers[rs2];
+            break;
+
+        // Case for XOR
+        case 0x4:
+            registers[rd] = registers[rs1] ^ registers[rs2];
+            break;
+
+        // Case for SRL & SRA
+        case 0x5:
+
+            // TODO: SRL & SRA 연산은 signed & unsigned 중 어떤 자료형을 사용하는지에 따라서 차이점이 발생
+
+            // Case for SRL
+            if (instr->funct7 == 0x0) {
+                registers[rd] = registers[rs1] >> registers[rs2];
+            }
+
+            // Case for SRA
+            else if (instr->funct7 == 0x20) {
+                registers[rd] = registers[rs1] >> registers[rs2];
+            }
+
+            // Should Never Happen
+            else {
+                abort();
+            }
+
+            break;
+
+
+        // Case for OR
+        case 0x6:
+            registers[rd] = registers[rs1] | registers[rs2];
+
+        // Case for AND
+        case 0x7:
+            registers[rd] = registers[rs1] & registers[rs2];
+        default:
+            break;
+    }
+}
+
+// Execution functions for R type instruction
+void execute_i_type(const I_Instruction *instr, const unsigned int rd, const unsigned int rs1, const unsigned int imm,
+                    unsigned int *pc) {
+    unsigned int shamt;
+
+    // Case for JARL instruction only
+    if (instr->opcode == 0x67) {
+        // JALR opcode
+        // 현재 PC + 4를 rd에 저장
+        registers[rd] = *pc + 4;
+
+        // 점프할 주소 계산 (rs1 + immediate)
+        unsigned int jump_addr = registers[rs1] + imm;
+
+        // 최하위 비트는 0으로 설정 (word alignment)
+        jump_addr = jump_addr & ~1;
+
+        // PC 업데이트
+        *pc = jump_addr;
+    }
+
+    // Case for opcode 0x13
+    else if (instr->opcode == 0x13) {
+        switch (instr->funct3) {
+            // Case for ADDI
+            case 0x0:
+                registers[rd] = registers[rs1] + imm;
+                break;
+
+            // Case for XORI
+            case 0x4:
+                registers[rd] = registers[rs1] ^ imm;
+                break;
+
+            // Case for ORI
+            case 0x6:
+                registers[rd] = registers[rs1] | imm;
+                break;
+
+            // Case for ANDI
+            case 0x7:
+                registers[rd] = registers[rs1] & imm;
+                break;
+
+            // Case for SLLI
+            case 0x1:
+                shamt = imm;
+                registers[rd] = registers[rs1] << shamt;
+                break;
+
+            // Case for SRLI & SRAI
+            case 0x5:
+
+                // Reassign into shamt variable for better readability
+                shamt = imm;
+
+                if (instr->funct7 == 0x0) {
+                    registers[rd] = registers[rs1] >> shamt;
+                }
+
+                // Case for SRAI
+                else if (instr->funct7 == 0x10) {
+                    // FIXME: 레지스터를 사용하는 것이 아니라, 메모리를 구현하는 자료형을 사용해야 한다.
+                    registers[rd] = registers[rs1] >> shamt;
+                }
+
+                // Should Never Happen
+                else {
+                    abort();
+                }
+
+                break;
+        }
+    }
+
+    // Case for opcode is 0x3
+    else if (instr->opcode == 0x3) {
+        // Case for LW
+        switch (instr->funct3) {
+            case 0x2:
+                registers[rd] = *(&registers[rs1] + (imm * 4));
+                break;
+            default:
+                break;
+        }
+    }
+
+    // Should Never Happen
+    else {
+        abort();
+    }
+}
+
+// Execution functions for S type instruction
+void execute_s_type(const S_Instruction *instr, const unsigned int rs2, const unsigned int rs1,
+                    const unsigned int imm) {
+    // SW 명령어 실행
+    if (instr->funct3 == 0x2) {
+        // SW의 funct3는 0x2
+        unsigned int address = registers[rs1] + imm;
+        // 주소를 워드 단위로 변환 (4로 나눔)
+        unsigned int word_address = address >> 2;
+
+        // 메모리 범위 체크
+        if (word_address < MEMORY_SIZE) {
+            memory[word_address] = registers[rs2];
+        } else {
+            // 메모리 범위 초과 에러 처리
+            printf("Memory access error: address out of bounds\n");
+            abort();
+        }
+    }
+}
+
+
+// Execution functions for SB type instruction
+void execute_sb_type(const SB_Instruction *instr, const unsigned int rs1, const unsigned int rs2,
+                     const unsigned int imm, unsigned int *pc) {
+    int branch_taken = 0;
+
+    switch (instr->funct3) {
+        case 0x0: // BEQ (Branch if Equal)
+            branch_taken = (registers[rs1] == registers[rs2]);
+            break;
+
+        case 0x1: // BNE (Branch if Not Equal)
+            branch_taken = (registers[rs1] != registers[rs2]);
+            break;
+
+        case 0x4: // BLT (Branch if Less Than)
+            // signed comparison을 위해 int32_t로 캐스팅
+            branch_taken = ((int32_t) registers[rs1] < (int32_t) registers[rs2]);
+            break;
+
+        case 0x5: // BGE (Branch if Greater or Equal)
+            // signed comparison을 위해 int32_t로 캐스팅
+            branch_taken = ((int32_t) registers[rs1] >= (int32_t) registers[rs2]);
+            break;
+
+        default:
+            printf("Invalid branch instruction funct3\n");
+            abort();
+    }
+
+    // 분기가 성공하면 PC를 업데이트
+    if (branch_taken) {
+        // imm은 이미 2를 곱한 값으로 가정 (word-aligned)
+        *pc = *pc + imm;
+    } else {
+        // 분기가 실패하면 다음 명령어로
+        *pc = *pc + 4;
+    }
+}
+
+
+// Execution functions for SB type instruction
+
 // Binary instruction으로 파일에 쓰기 위함
 void print_binary_to_file(unsigned int n, FILE *file) {
     int bits = sizeof(n) * 8; // unsigned int의 비트 수 (32비트 환경에서는 4바이트 * 8 = 32비트)
@@ -178,7 +419,6 @@ void parse_imm_for_sb_type_inst(const unsigned int imm, unsigned int *imm1, unsi
 void process_file(const char *filename) {
     FILE *input_file = fopen(filename, "r");
 
-
     if (!input_file) {
         printf("Input file does not exist!!\n");
         return;
@@ -198,7 +438,8 @@ void process_file(const char *filename) {
     unsigned int pc = STARTING_PC;
 
     while (fgets(line, sizeof(line), input_file)) {
-        char instruction_name[10];
+        char instruction_name[MAX_LINE_LENGTH];
+        char jump_label_name[MAX_LINE_LENGTH];
         unsigned int rd = 0, rs1 = 0, rs2 = 0, imm = 0;
         unsigned int machine_code = 0;
 
@@ -210,21 +451,35 @@ void process_file(const char *filename) {
 
         // operation rd, rs1, imm12 format instruction -> I type with immediate instruction
         // operation rd, rs1, shamt format instruction -> SLLI & SRLI & SRAI intruction only
+        // I 타입 명령어 처리 - immediate 값을 사용하는 경우
         else if (sscanf(line, "%s x%u, x%u, %u", instruction_name, &rd, &rs1, &imm) == 4) {
-            // In the case of SLLI & SRLI & SRAI, use funct7 with shamt
-            if (strcasecmp(instruction_name, "SLLI") == 0 || strcasecmp(instruction_name, "SRLI") == 0 || strcasecmp(
-                    instruction_name, "SRAI") == 0) {
-                unsigned int shamt = imm; // Specify into shamt
+            const I_Instruction *i_instr = find_i_instruction(instruction_name);
 
-                const I_Instruction *i_instr = find_i_instruction(instruction_name);
-
-                machine_code = encode_i_type((i_instr->funct7 << 5) | shamt, rs1, i_instr->funct3, rd,
-                                             i_instr->opcode);
-            } else {
-                const I_Instruction *i_instr = find_i_instruction(instruction_name);
+            // JALR 명령어 처리
+            if (strcasecmp(instruction_name, "JALR") == 0) {
                 machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
+                execute_i_type(i_instr, rd, rs1, imm, &pc);
+            }
+            // 다른 I-type 명령어들 처리
+            else {
+                if (strcasecmp(instruction_name, "SLLI") == 0 ||
+                    strcasecmp(instruction_name, "SRLI") == 0 ||
+                    strcasecmp(instruction_name, "SRAI") == 0) {
+                    unsigned int shamt = imm;
+                    machine_code = encode_i_type(
+                        (i_instr->funct7 << 5) | shamt,
+                        rs1,
+                        i_instr->funct3,
+                        rd,
+                        i_instr->opcode
+                    );
+                } else {
+                    machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
+                }
+                execute_i_type(i_instr, rd, rs1, imm, &pc);
             }
         }
+
 
         // operation rd, imm12(rs1) format instruction -> I type with load instruction
         // operation rs2, imm12(rs1) format instruction -> S type with store instruction
@@ -251,7 +506,7 @@ void process_file(const char *filename) {
         }
 
         // operation rs1, rs2, imm12 format instruction -> SB type
-        else if (sscanf(line, "%s x%u, x%u, %u", instruction_name, &rs1, &rs2, &imm) == 4) {
+        else if (sscanf(line, "%s x%u, x%u, %s", instruction_name, &rs1, &rs2, jump_label_name) == 4) {
             const SB_Instruction *sb_instr = find_sb_instruction(instruction_name);
 
             unsigned int imm1; // imm[12:10-5]
@@ -266,12 +521,23 @@ void process_file(const char *filename) {
         else if (sscanf(line, "%s x%u, x%u", instruction_name, &rd, &imm) == 4) {
             const UJ_Instruction *uj_instr = find_uj_instruction(instruction_name);
             machine_code = encode_uj_type(imm, rd, uj_instr->opcode);
-        } else {
+        }
+
+        // TODO: handle when meet label
+
+
+        // rest of the case
+        else {
             // TODO: 잘못된 형식의 명령어를 읽어올 때 처리
         }
 
-        // Write machine code and PC to files
+        // Write machine code in output file
+
+        // FIXME: 명령어 확인을 위한 디버깅용 처리 코드 -> 삭제 요망
+        fprintf(output, "%s", line);
         print_binary_to_file(machine_code, output);
+
+        // Write pc in trace file
         fprintf(trace, "%u\n", pc);
 
         pc += 4; // Increment PC by 4 for each instruction
@@ -288,6 +554,8 @@ void process_file(const char *filename) {
 int main() {
     char filename[MAX_LINE_LENGTH];
     int check_terminate = 0;
+
+    initialize_registers();
 
     while (true) {
         printf("Enter Input File Name: ");
