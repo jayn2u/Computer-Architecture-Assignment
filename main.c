@@ -426,6 +426,33 @@ void parse_imm_for_sb_type_inst(const int imm, int *imm1, int *imm2) {
     *imm2 = (imm & 0x1E) | ((imm >> 11) & 0x1); // 4비트와 1비트를 결합하여 imm[4:1]과 imm[11] 추출
 }
 
+int extract_bits(int imm, int high, int low) {
+    int mask = (1 << (high - low + 1)) - 1;
+    return (imm >> low) & mask;
+}
+
+// UJ 타입 명령어에서 imm를 파싱
+int parse_imm_for_uj_type_inst(int imm) {
+    imm = imm >> 1;
+
+    // 각 비트를 추출하여 필요한 위치에 결합
+    int bit_20 = extract_bits(imm, 19, 19); // imm[20]
+    int bits_10_1 = extract_bits(imm, 9, 0); // imm[10-1]
+    int bit_11 = extract_bits(imm, 10, 10); // imm[11]
+    int bits_19_12 = extract_bits(imm, 18, 11); // imm[19-12]
+
+    // 결합된 결과값을 저장할 변수
+    int result = 0;
+
+    // 각 비트 부분을 올바른 위치에 시프트하여 결합
+    result |= (bit_20 << 19); // 20번 비트 위치에 bit_20 설정
+    result |= (bits_10_1 << 9); // 10-1번 비트 위치에 bits_10_1 설정
+    result |= (bit_11 << 8); // 11번 비트 위치에 bit_11 설정
+    result |= (bits_19_12); // 19-12번 비트 위치에 bits_19_12 설정
+
+    return result;
+}
+
 // =====================================================================================================================
 //
 // 핵심 동작을 수행하는 함수
@@ -497,11 +524,12 @@ void process_file(const char *filename) {
     while (fgets(line, sizeof(line), input_file)) {
         char instruction_name[MAX_LINE_LENGTH];
         char jump_label_name[MAX_LINE_LENGTH];
+        char procedure_name[MAX_LINE_LENGTH];
         int rd = 0, rs1 = 0, rs2 = 0, imm = 0;
         int machine_code = 0;
 
 
-        if (sscanf(line, "%s x%u, x%u, x%u", instruction_name, &rd, &rs1, &rs2) == 4) {
+        if (sscanf(line, "%s x%d, x%d, x%d", instruction_name, &rd, &rs1, &rs2) == 4) {
             const R_Instruction *r_instr = find_r_instruction(instruction_name);
             machine_code = encode_r_type(r_instr->funct7, rs2, rs1, r_instr->funct3, rd, r_instr->opcode);
         }
@@ -509,41 +537,38 @@ void process_file(const char *filename) {
         // operation rd, rs1, imm12 format instruction -> I type with immediate instruction
         // operation rd, rs1, shamt format instruction -> SLLI & SRLI & SRAI instruction only
         // I 타입 명령어 처리 - immediate 값을 사용하는 경우
-        else if (sscanf(line, "%s x%u, x%u, %u", instruction_name, &rd, &rs1, &imm) == 4) {
+        else if (sscanf(line, "%s x%d, x%d, %d", instruction_name, &rd, &rs1, &imm) == 4) {
             const I_Instruction *i_instr = find_i_instruction(instruction_name);
 
-            // JALR 명령어 처리
-            if (strcasecmp(instruction_name, "JALR") == 0) {
+            if (strcasecmp(instruction_name, "SLLI") == 0 ||
+                strcasecmp(instruction_name, "SRLI") == 0 ||
+                strcasecmp(instruction_name, "SRAI") == 0) {
+                int shamt = imm;
+                machine_code = encode_i_type(
+                    (i_instr->funct7 << 5) | shamt,
+                    rs1,
+                    i_instr->funct3,
+                    rd,
+                    i_instr->opcode
+                );
+            } else {
                 machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
-            }
-            // 다른 I-type 명령어들 처리
-            else {
-                if (strcasecmp(instruction_name, "SLLI") == 0 ||
-                    strcasecmp(instruction_name, "SRLI") == 0 ||
-                    strcasecmp(instruction_name, "SRAI") == 0) {
-                    int shamt = imm;
-                    machine_code = encode_i_type(
-                        (i_instr->funct7 << 5) | shamt,
-                        rs1,
-                        i_instr->funct3,
-                        rd,
-                        i_instr->opcode
-                    );
-                } else {
-                    machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
-                }
             }
         }
 
 
         // operation rd, imm12(rs1) format instruction -> I type with load instruction
         // operation rs2, imm12(rs1) format instruction -> S type with store instruction
-        else if (sscanf(line, "%s x%u, %u(x%u)", instruction_name, &rd, &imm, &rs1) == 4) {
-            int result = strcasecmp(instruction_name, "LW"); // compare does instruction is LW
+        // JALR x0, 0(x1) format instruction -> I type with jump and link instruction
+        else if (sscanf(line, "%s x%d, %d(x%d)", instruction_name, &rd, &imm, &rs1) == 4) {
+            int is_LW = strcasecmp(instruction_name, "LW"); // compare does instruction is LW
+            int is_JARL = strcasecmp(instruction_name, "JALR");
 
-            if (result == 0) {
-                // LW case
+            if (is_LW == 0) {
                 const I_Instruction *i_instr = find_i_instruction(instruction_name); // return only LW instruction
+                machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
+            } else if (is_JARL == 0) {
+                const I_Instruction *i_instr = find_i_instruction(instruction_name);
                 machine_code = encode_i_type(imm, rs1, i_instr->funct3, rd, i_instr->opcode);
             } else {
                 // SW case
@@ -561,7 +586,7 @@ void process_file(const char *filename) {
         }
 
         // operation rs1, rs2, imm12 format instruction -> SB type
-        else if (sscanf(line, "%s x%u, x%u, %s", instruction_name, &rs1, &rs2, jump_label_name) == 4) {
+        else if (sscanf(line, "%s x%d, x%d, %s", instruction_name, &rs1, &rs2, jump_label_name) == 4) {
             const SB_Instruction *sb_instr = find_sb_instruction(instruction_name);
 
             const int labels_size = sizeof(labels) / sizeof(labels[0]);
@@ -581,8 +606,19 @@ void process_file(const char *filename) {
         }
 
         // operation rd, imm20 format instruction -> UJ type
-        else if (sscanf(line, "%s x%u, x%u", instruction_name, &rd, &imm) == 4) {
+        else if (sscanf(line, "%s x%d, %s", instruction_name, &rd, procedure_name) == 3) {
             const UJ_Instruction *uj_instr = find_uj_instruction(instruction_name);
+
+            const int labels_size = sizeof(labels) / sizeof(labels[0]);
+            for (int i = 0; i < labels_size; i++) {
+                if (strcasecmp(labels[i].name, procedure_name) == 0) {
+                    imm = labels[i].pc_address - pc;
+                    break;
+                }
+            }
+
+            imm = parse_imm_for_uj_type_inst(imm);
+
             machine_code = encode_uj_type(imm, rd, uj_instr->opcode);
         }
 
@@ -590,6 +626,8 @@ void process_file(const char *filename) {
         else if (sscanf(line, "%s", instruction_name) == 1) {
             if (strcasecmp(instruction_name, "EXIT") == 0) {
                 machine_code = EXIT_CODE;
+            } else {
+                continue;
             }
         }
 
