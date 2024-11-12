@@ -2,3 +2,5 @@
 *.trace
 
 temp.s
+
+.DS_Store
