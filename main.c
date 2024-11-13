@@ -712,7 +712,7 @@ void trace_pc(const char *filename) {
         index++;
     }
 
-    // FIXME: line 순서대로 선형적으로 진행 중, 분기 시점에서는 line이 해당 위치로 이동해야 함.
+    // FIXME: procedure를 사용한 어셈블리에서 동작하는 코드 작성
     for (int pc_location = 0; pc_location < index;) {
         char instruction_name[MAX_LINE_LENGTH] = {0,};
         char jump_label_name[MAX_LINE_LENGTH] = {0,};
