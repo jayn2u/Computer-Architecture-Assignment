@@ -11,7 +11,7 @@ BGE x9, x8, loop
 ADDI x9, x0, 5
 ADDI x7, x0, 7
 BGE x7, x9, LAB
-ADD x10, x1, x2
 
+ADD x10, x1, x2
 LAB:
 SUB x11, x3, x4

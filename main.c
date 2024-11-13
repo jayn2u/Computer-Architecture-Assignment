@@ -10,7 +10,7 @@
 
 #define EXIT_CODE 0xFFFFFFFF // 종료 기계어 명령어
 
-#define LABEL_SIZE 5000 // 가능한 레이블 개수 최댓값
+#define MAX_LINE_COUNT 5000 // 가능한 레이블 개수 최댓값
 
 typedef struct {
     char name[10];
@@ -46,6 +46,7 @@ typedef struct {
 typedef struct {
     char name[MAX_LINE_LENGTH];
     int pc_address;
+    int instruction_index;
 } Label;
 
 Label labels[100]; // 레이블 저장 배열
@@ -188,212 +189,6 @@ int encode_uj_type(const int imm, const int rd, const int opcode) {
 
 // =====================================================================================================================
 //
-// 각 타입에 맞게 동작을 구현한 코드
-//
-// =====================================================================================================================
-
-// Execution functions for R type instruction
-void execute_r_type(const R_Instruction *instr, const int rd, const int rs1, const int rs2) {
-    switch (instr->funct3) {
-        // Case for ADD and SUB
-        case 0x0:
-
-            // Case for ADD
-            if (instr->funct7 == 0x0) {
-                registers[rd] = registers[rs1] + registers[rs2];
-            }
-
-            // Case for SUB
-            else if (instr->funct7 == 0x20) {
-                registers[rd] = registers[rs1] - registers[rs2];
-            }
-
-            break;
-
-        // Case for SLL
-        case 0x1:
-            registers[rd] = registers[rs1] << registers[rs2];
-            break;
-
-        // Case for XOR
-        case 0x4:
-            registers[rd] = registers[rs1] ^ registers[rs2];
-            break;
-
-        // Case for SRL & SRA
-        case 0x5:
-
-            // TODO: SRL & SRA 연산은 signed &  중 어떤 자료형을 사용하는지에 따라서 차이점이 발생
-
-            // Case for SRL
-            if (instr->funct7 == 0x0) {
-                registers[rd] = registers[rs1] >> registers[rs2];
-            }
-
-            // Case for SRA
-            else if (instr->funct7 == 0x20) {
-                registers[rd] = registers[rs1] >> registers[rs2];
-            }
-
-            break;
-
-
-        // Case for OR
-        case 0x6:
-            registers[rd] = registers[rs1] | registers[rs2];
-
-        // Case for AND
-        case 0x7:
-            registers[rd] = registers[rs1] & registers[rs2];
-        default:
-            break;
-    }
-}
-
-// Execution functions for R type instruction
-void execute_i_type(const I_Instruction *instr, const int rd, const int rs1, const int imm,
-                    int *pc) {
-    int shamt;
-
-    // Case for JARL instruction only
-    if (instr->opcode == 0x67) {
-        // JALR opcode
-        // 현재 PC + 4를 rd에 저장
-        registers[rd] = *pc + 4;
-
-        // 점프할 주소 계산 (rs1 + immediate)
-        int jump_addr = registers[rs1] + imm;
-
-        // 최하위 비트는 0으로 설정 (word alignment)
-        jump_addr = jump_addr & ~1;
-
-        // PC 업데이트
-        *pc = jump_addr;
-    }
-
-    // Case for opcode 0x13
-    else if (instr->opcode == 0x13) {
-        switch (instr->funct3) {
-            // Case for ADDI
-            case 0x0:
-                registers[rd] = registers[rs1] + imm;
-                break;
-
-            // Case for XORI
-            case 0x4:
-                registers[rd] = registers[rs1] ^ imm;
-                break;
-
-            // Case for ORI
-            case 0x6:
-                registers[rd] = registers[rs1] | imm;
-                break;
-
-            // Case for ANDI
-            case 0x7:
-                registers[rd] = registers[rs1] & imm;
-                break;
-
-            // Case for SLLI
-            case 0x1:
-                shamt = imm;
-                registers[rd] = registers[rs1] << shamt;
-                break;
-
-            // Case for SRLI & SRAI
-            case 0x5:
-
-                // Reassign into shamt variable for better readability
-                shamt = imm;
-
-                if (instr->funct7 == 0x0) {
-                    registers[rd] = registers[rs1] >> shamt;
-                }
-
-                // Case for SRAI
-                else if (instr->funct7 == 0x10) {
-                    // FIXME: 레지스터를 사용하는 것이 아니라, 메모리를 구현하는 자료형을 사용해야 한다.
-                    registers[rd] = registers[rs1] >> shamt;
-                }
-
-                break;
-        }
-    }
-
-    // Case for opcode is 0x3
-    else if (instr->opcode == 0x3) {
-        // Case for LW
-        switch (instr->funct3) {
-            case 0x2:
-                registers[rd] = *(&registers[rs1] + (imm * 4));
-                break;
-            default:
-                break;
-        }
-    }
-}
-
-// Execution functions for S type instruction
-void execute_s_type(const S_Instruction *instr, const int rs2, const int rs1,
-                    const int imm) {
-    // SW 명령어 실행
-    if (instr->funct3 == 0x2) {
-        // SW의 funct3는 0x2
-        int address = registers[rs1] + imm;
-        // 주소를 워드 단위로 변환 (4로 나눔)
-        int word_address = address >> 2;
-
-        // 메모리 범위 체크
-        if (word_address < MEMORY_SIZE) {
-            memory[word_address] = registers[rs2];
-        } else {
-            // 메모리 범위 초과 에러 처리
-            printf("Memory access error: address out of bounds\n");
-        }
-    }
-}
-
-
-// Execution functions for SB type instruction
-void execute_sb_type(const SB_Instruction *instr, const int rs1, const int rs2,
-                     const int imm, int *pc) {
-    int branch_taken = 0;
-
-    switch (instr->funct3) {
-        case 0x0: // BEQ (Branch if Equal)
-            branch_taken = (registers[rs1] == registers[rs2]);
-            break;
-
-        case 0x1: // BNE (Branch if Not Equal)
-            branch_taken = (registers[rs1] != registers[rs2]);
-            break;
-
-        case 0x4: // BLT (Branch if Less Than)
-            // signed comparison을 위해 int32_t로 캐스팅
-            branch_taken = ((int32_t) registers[rs1] < (int32_t) registers[rs2]);
-            break;
-
-        case 0x5: // BGE (Branch if Greater or Equal)
-            // signed comparison을 위해 int32_t로 캐스팅
-            branch_taken = ((int32_t) registers[rs1] >= (int32_t) registers[rs2]);
-            break;
-
-        default:
-            printf("Invalid branch instruction funct3\n");
-    }
-
-    // 분기가 성공하면 PC를 업데이트
-    if (branch_taken) {
-        // imm은 이미 2를 곱한 값으로 가정 (word-aligned)
-        *pc = *pc + imm;
-    } else {
-        // 분기가 실패하면 다음 명령어로
-        *pc = *pc + 4;
-    }
-}
-
-// =====================================================================================================================
-//
 // Utility 성격을 가지는 코드
 //
 // =====================================================================================================================
@@ -455,6 +250,253 @@ int parse_imm_for_uj_type_inst(int imm) {
     return result;
 }
 
+void fprintf_pc_into_trace_file(FILE *trace, const int *pc) {
+    fprintf(trace, "%u\n", *pc);
+}
+
+// =====================================================================================================================
+//
+// 각 타입에 맞게 동작을 구현한 코드
+//
+// =====================================================================================================================
+
+// Execution functions for R type instruction
+void execute_r_type(const R_Instruction *instr, const int rd, const int rs1, const int rs2, FILE *trace, int *pc_ptr,
+                    int *pc_location_ptr) {
+    switch (instr->funct3) {
+        // Case for ADD and SUB
+        case 0x0:
+            // Case for ADD
+            if (instr->funct7 == 0x0) {
+                registers[rd] = registers[rs1] + registers[rs2];
+            }
+
+            // Case for SUB
+            else if (instr->funct7 == 0x20) {
+                registers[rd] = registers[rs1] - registers[rs2];
+            }
+
+            break;
+
+        // Case for SLL
+        case 0x1:
+            registers[rd] = registers[rs1] << registers[rs2];
+            break;
+
+        // Case for XOR
+        case 0x4:
+            registers[rd] = registers[rs1] ^ registers[rs2];
+            break;
+
+        // Case for SRL & SRA
+        case 0x5:
+
+            // TODO: SRL & SRA 연산은 signed &  중 어떤 자료형을 사용하는지에 따라서 차이점이 발생
+
+            // Case for SRL
+            if (instr->funct7 == 0x0) {
+                registers[rd] = registers[rs1] >> registers[rs2];
+            }
+
+            // Case for SRA
+            else if (instr->funct7 == 0x20) {
+                registers[rd] = registers[rs1] >> registers[rs2];
+            }
+
+            break;
+
+
+        // Case for OR
+        case 0x6:
+            registers[rd] = registers[rs1] | registers[rs2];
+
+        // Case for AND
+        case 0x7:
+            registers[rd] = registers[rs1] & registers[rs2];
+        default:
+            break;
+    }
+
+    *pc_location_ptr += 1;
+    fprintf_pc_into_trace_file(trace, pc_ptr);
+    *pc_ptr += 4;
+}
+
+// Execution functions for R type instruction
+void execute_i_type(const I_Instruction *instr, const int rd, const int rs1, const int imm, FILE *trace,
+                    int *pc_ptr, int *pc_location_ptr) {
+    int shamt;
+
+    // Case for JARL instruction only
+    if (instr->opcode == 0x67) {
+        // JALR opcode
+        // 현재 PC + 4를 rd에 저장
+        registers[rd] = *pc_ptr + 4;
+
+        // 점프할 주소 계산 (rs1 + immediate)
+        int jump_addr = registers[rs1] + imm;
+
+        // 최하위 비트는 0으로 설정 (word alignment)
+        jump_addr = jump_addr & ~1;
+
+        fprintf_pc_into_trace_file(trace, pc_ptr);
+
+        // PC 업데이트
+        *pc_ptr = jump_addr;
+
+        // TODO: pc_location 조정 코드
+        int size = sizeof(labels) / sizeof(labels[0]);
+
+        for (int i = 0; i < size; i++) {
+            if (*pc_ptr == labels[i].pc_address) {
+                *pc_location_ptr = labels[i].pc_address;
+                break;
+            }
+        }
+    }
+
+    // Case for opcode 0x13
+    else if (instr->opcode == 0x13) {
+        switch (instr->funct3) {
+            case 0x0: // Case for ADDI
+                registers[rd] = registers[rs1] + imm;
+                break;
+
+            case 0x4: // Case for XORI
+                registers[rd] = registers[rs1] ^ imm;
+                break;
+
+            case 0x6: // Case for ORI
+                registers[rd] = registers[rs1] | imm;
+                break;
+
+            case 0x7: // Case for ANDI
+                registers[rd] = registers[rs1] & imm;
+                break;
+
+            case 0x1: // Case for SLLI
+                shamt = imm;
+                registers[rd] = registers[rs1] << shamt;
+                break;
+
+            case 0x5: // Case for SRLI & SRAI
+                // Reassign into shamt variable for better readability
+                shamt = imm;
+
+                if (instr->funct7 == 0x0) {
+                    registers[rd] = registers[rs1] >> shamt;
+                }
+
+                // Case for SRAI
+                else if (instr->funct7 == 0x10) {
+                    // FIXME: 레지스터를 사용하는 것이 아니라, 메모리를 구현하는 자료형을 사용해야 한다.
+                    registers[rd] = registers[rs1] >> shamt;
+                }
+
+                break;
+        }
+
+        *pc_location_ptr += 1;
+        fprintf_pc_into_trace_file(trace, pc_ptr);
+        *pc_ptr += 4;
+    }
+
+    // Case for opcode is 0x3
+    else if (instr->opcode == 0x3) {
+        // Case for LW
+        switch (instr->funct3) {
+            case 0x2:
+                registers[rd] = *(&registers[rs1] + (imm * 4));
+                break;
+            default:
+                break;
+        }
+
+        fprintf_pc_into_trace_file(trace, pc_ptr);
+        *pc_ptr += 4;
+    }
+}
+
+// Execution functions for S type instruction
+void execute_s_type(const S_Instruction *instr, const int rs2, const int rs1,
+                    const int imm, FILE *trace, int *pc_ptr, int *pc_location_ptr) {
+    // SW 명령어 실행
+    if (instr->funct3 == 0x2) {
+        // SW의 funct3는 0x2
+        int address = registers[rs1] + imm;
+        // 주소를 워드 단위로 변환 (4로 나눔)
+        int word_address = address >> 2;
+
+        // 메모리 범위 체크
+        if (word_address < 1024) {
+            memory[word_address] = registers[rs2];
+        } else {
+            // 메모리 범위 초과 에러 처리
+            printf("Memory access error: address out of bounds\n");
+        }
+    }
+
+    *pc_location_ptr += 1;
+    fprintf_pc_into_trace_file(trace, pc_ptr);
+    *pc_ptr += 4;
+}
+
+
+// Execution functions for SB type instruction
+void execute_sb_type(const SB_Instruction *instr, const int rs1, const int rs2,
+                     const int imm, FILE *trace, int *pc_ptr, int *pc_location_ptr) {
+    int branch_condition_is_true = 0;
+
+    switch (instr->funct3) {
+        case 0x0: // BEQ (Branch if Equal)
+            branch_condition_is_true = (registers[rs1] == registers[rs2]);
+            break;
+
+        case 0x1: // BNE (Branch if Not Equal)
+            branch_condition_is_true = (registers[rs1] != registers[rs2]);
+            break;
+
+        case 0x4: // BLT (Branch if Less Than)
+            // signed comparison을 위해 int32_t로 캐스팅
+            branch_condition_is_true = ((int32_t) registers[rs1] < (int32_t) registers[rs2]);
+            break;
+
+        case 0x5: // BGE (Branch if Greater or Equal)
+            // signed comparison을 위해 int32_t로 캐스팅
+            branch_condition_is_true = ((int32_t) registers[rs1] >= (int32_t) registers[rs2]);
+            break;
+
+        default:
+            printf("Invalid branch instruction funct3\n");
+    }
+
+    // 분기가 성공하면 PC를 업데이트
+    if (branch_condition_is_true) {
+        // imm은 이미 2를 곱한 값으로 가정 (word-aligned)
+        fprintf_pc_into_trace_file(trace, pc_ptr);
+        *pc_ptr = *pc_ptr + imm;
+
+        int size = sizeof(labels) / sizeof(labels[0]);
+
+        for (int i = 0; i < size; i++) {
+            if (*pc_ptr == labels[i].pc_address) {
+                *pc_location_ptr = labels[i].instruction_index;
+                break;
+            }
+        }
+    } else {
+        // 분기가 실패하면 다음 명령어로
+        *pc_location_ptr += 1;
+        fprintf_pc_into_trace_file(trace, pc_ptr);
+        *pc_ptr = *pc_ptr + 4;
+    }
+}
+
+void execute_uj_type(const UJ_Instruction *instr, const int rd, int imm, FILE *trace, int *pc, int *pc_location) {
+    // TODO: JAL instruction execution code
+}
+
+
 // =====================================================================================================================
 //
 // 핵심 동작을 수행하는 함수
@@ -464,14 +506,10 @@ int parse_imm_for_uj_type_inst(int imm) {
 void record_label(const char *filename) {
     FILE *input_file = fopen(filename, "r");
 
-    if (!input_file) {
-        printf("Input file does not exist!!\n");
-        return;
-    }
-
-    char line[MAX_LINE_LENGTH];
+    char line[MAX_LINE_LENGTH] = {0,};
     int pc = STARTING_PC;
     int label_count = 0;
+    int index = 0;
 
     while (fgets(line, sizeof(line), input_file)) {
         char *line_ptr = line;
@@ -485,15 +523,18 @@ void record_label(const char *filename) {
         if (colon_ptr) {
             // 레이블임
             size_t label_len = colon_ptr - line_ptr;
-            char label_name[MAX_LINE_LENGTH];
+            char label_name[MAX_LINE_LENGTH] = {0,};
             strncpy(label_name, line_ptr, label_len);
             label_name[label_len] = '\0';
 
             // 레이블 이름과 현재 pc를 labels[] 배열에 저장
             strcpy(labels[label_count].name, label_name);
             labels[label_count].pc_address = pc;
+            labels[label_count].instruction_index = index;
+            index++;
             label_count++;
         } else {
+            index++;
             pc += 4;
         }
     }
@@ -502,25 +543,17 @@ void record_label(const char *filename) {
 }
 
 // Add other encoding functions for S-type, SB-type, U-type, and UJ-type
-void process_file(const char *filename) {
+void translate_assembly_instruction(const char *filename) {
     FILE *input_file = fopen(filename, "r");
 
-    if (!input_file) {
-        printf("Input file does not exist!!\n");
-        return;
-    }
-
     char output_file[MAX_LINE_LENGTH];
-    char trace_file[MAX_LINE_LENGTH];
     char filename_without_extension[MAX_LINE_LENGTH];
     sscanf(filename, "%[^.]", filename_without_extension);
     snprintf(output_file, sizeof(output_file), "%s.o", filename_without_extension);
-    snprintf(trace_file, sizeof(trace_file), "%s.trace", filename_without_extension);
 
     FILE *output = fopen(output_file, "w");
-    FILE *trace = fopen(trace_file, "w");
 
-    char line[MAX_LINE_LENGTH];
+    char line[MAX_LINE_LENGTH] = {0,};
     int pc = STARTING_PC;
 
     while (fgets(line, sizeof(line), input_file)) {
@@ -641,12 +674,8 @@ void process_file(const char *filename) {
         // Write machine code in output file
         if (machine_code == EXIT_CODE) {
             print_binary_to_file(EXIT_CODE, output);
-            fprintf(trace, "%u\n", pc);
         } else {
             print_binary_to_file(machine_code, output);
-
-            // Write pc in trace file
-            fprintf(trace, "%u\n", pc);
 
             pc += 4; // Increment PC by 4 for each instruction
         }
@@ -654,10 +683,130 @@ void process_file(const char *filename) {
 
     fclose(input_file);
     fclose(output);
+
+    // FIXME: 과제 제출 시 해당 코드 제거 요망, 개발 간 확인용
+    printf("Files %s generated successfully.\n", output_file);
+}
+
+void trace_pc(const char *filename) {
+    FILE *input_file = fopen(filename, "r");
+
+    char trace_file[MAX_LINE_LENGTH] = {0,};
+    char filename_without_extension[MAX_LINE_LENGTH] = {0,};
+    sscanf(filename, "%[^.]", filename_without_extension);
+    snprintf(trace_file, sizeof(trace_file), "%s.trace", filename_without_extension);
+    FILE *trace = fopen(trace_file, "w");
+
+    char line[MAX_LINE_LENGTH] = {0,};
+    int pc = STARTING_PC;
+
+    char instructions[MAX_LINE_COUNT][MAX_LINE_LENGTH] = {{0,}};
+
+    int index = 0;
+    while (fgets(line, sizeof(line), input_file)) {
+        if (line[0] == '\n') {
+            continue;
+        }
+        strcpy(instructions[index], line);
+        index++;
+    }
+
+    // FIXME: line 순서대로 선형적으로 진행 중, 분기 시점에서는 line이 해당 위치로 이동해야 함.
+    for (int pc_location = 0; pc_location < index;) {
+        char instruction_name[MAX_LINE_LENGTH] = {0,};
+        char jump_label_name[MAX_LINE_LENGTH] = {0,};
+        char procedure_name[MAX_LINE_LENGTH] = {0,};
+        int rd = 0, rs1 = 0, rs2 = 0, imm = 0;
+
+        strcpy(line, instructions[pc_location]);
+
+        // Execute R type instruction
+        if (sscanf(line, "%s x%d, x%d, x%d", instruction_name, &rd, &rs1, &rs2) == 4) {
+            const R_Instruction *r_instr = find_r_instruction(instruction_name);
+            execute_r_type(r_instr, rd, rs1, rs2, trace, &pc, &pc_location);
+        }
+
+        // Execute "operation rd, rs1, imm12" format instruction
+        // Execute "operation rd, rs1, shamt" format instruction
+        else if (sscanf(line, "%s x%d, x%d, %d", instruction_name, &rd, &rs1, &imm) == 4) {
+            const I_Instruction *i_instr = find_i_instruction(instruction_name);
+
+            if (strcasecmp(instruction_name, "SLLI") == 0 ||
+                strcasecmp(instruction_name, "SRLI") == 0 ||
+                strcasecmp(instruction_name, "SRAI") == 0) {
+                int shamt = imm;
+                execute_i_type(i_instr, rd, rs1, shamt, trace, &pc, &pc_location); // Execute SLLI & SRLI & SRAI
+            } else {
+                execute_i_type(i_instr, rd, rs1, imm, trace, &pc, &pc_location); // Execute ADDI, XORI, ORI, ANDI
+            }
+        }
+
+        // Execute "operation rd, imm12(rs1)" format instruction
+        // Execute "operation rs2, imm12(rs1)" format instruction
+        // Execute "JALR x0, 0(x1)" format instruction
+        else if (sscanf(line, "%s x%d, %d(x%d)", instruction_name, &rd, &imm, &rs1) == 4) {
+            int is_LW = strcasecmp(instruction_name, "LW"); // compare does instruction is LW
+            int is_JARL = strcasecmp(instruction_name, "JALR");
+
+            if (is_LW == 0) {
+                const I_Instruction *i_instr = find_i_instruction(instruction_name); // return only LW instruction
+                execute_i_type(i_instr, rd, rs1, imm, trace, &pc, &pc_location);
+            } else if (is_JARL == 0) {
+                const I_Instruction *i_instr = find_i_instruction(instruction_name);
+                execute_i_type(i_instr, rd, rs1, imm, trace, &pc, &pc_location);
+            } else {
+                // SW case
+                const S_Instruction *s_instr = find_s_instruction(instruction_name); // return only SW instruction
+                rs2 = rd; // SW instruction doesn't use rd. Change into rs2.
+                execute_s_type(s_instr, rs2, rs1, imm, trace, &pc, &pc_location);
+            }
+        }
+
+        // Execute "operation rs1, rs2, imm12" format instruction
+        else if (sscanf(line, "%s x%d, x%d, %s", instruction_name, &rs1, &rs2, jump_label_name) == 4) {
+            const SB_Instruction *sb_instr = find_sb_instruction(instruction_name);
+
+            const int labels_size = sizeof(labels) / sizeof(labels[0]);
+            for (int i = 0; i < labels_size; i++) {
+                if (strcasecmp(labels[i].name, jump_label_name) == 0) {
+                    imm = labels[i].pc_address - pc;
+                    break;
+                }
+            }
+
+            execute_sb_type(sb_instr, rs1, rs2, imm, trace, &pc, &pc_location);
+        }
+
+        // Execute "operation rd, imm20" format instruction
+        else if (sscanf(line, "%s x%d, %s", instruction_name, &rd, procedure_name) == 3) {
+            const UJ_Instruction *uj_instr = find_uj_instruction(instruction_name);
+
+            const int labels_size = sizeof(labels) / sizeof(labels[0]);
+            for (int i = 0; i < labels_size; i++) {
+                if (strcasecmp(labels[i].name, procedure_name) == 0) {
+                    imm = labels[i].pc_address - pc;
+                    break;
+                }
+            }
+
+            execute_uj_type(uj_instr, rd, imm, trace, &pc, &pc_location);
+        }
+
+        // EXIT
+        else if (sscanf(line, "%s", instruction_name) == 1) {
+            if (strcasecmp(instruction_name, "EXIT") == 0) {
+                fclose(trace);
+                return;
+            }
+
+            pc_location++;
+        }
+    }
+
     fclose(trace);
 
     // FIXME: 과제 제출 시 해당 코드 제거 요망, 개발 간 확인용
-    printf("Files %s and %s generated successfully.\n", output_file, trace_file);
+    printf("Files %s generated successfully.\n", trace_file);
 }
 
 // =====================================================================================================================
@@ -668,7 +817,6 @@ void process_file(const char *filename) {
 
 int main() {
     int terminate_flag = 0;
-
 
     while (true) {
         initialize_registers(); // Need to initialize everytime when filename entered
@@ -682,8 +830,16 @@ int main() {
             break;
         }
 
+        FILE *input_file = fopen(filename, "r");
+
+        if (!input_file) {
+            printf("Input file does not exist!!\n");
+            continue;
+        }
+
         record_label(filename);
-        process_file(filename);
+        translate_assembly_instruction(filename);
+        trace_pc(filename);
     }
 
     return 0;
