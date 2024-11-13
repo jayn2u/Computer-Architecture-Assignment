@@ -412,6 +412,7 @@ void execute_i_type(const I_Instruction *instr, const int rd, const int rs1, con
                 break;
         }
 
+        *pc_location_ptr += 1;
         fprintf_pc_into_trace_file(trace, pc_ptr);
         *pc_ptr += 4;
     }
