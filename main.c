@@ -10,11 +10,7 @@
 
 #define EXIT_CODE 0xFFFFFFFF // 종료 기계어 명령어
 
-#define MEMORY_SIZE 1024  // 4KB 메모리
-
 #define LABEL_SIZE 5000 // 가능한 레이블 개수 최댓값
-
-int memory[MEMORY_SIZE]; // 가상 메모리 공간
 
 typedef struct {
     char name[10];
@@ -88,9 +84,13 @@ SB_Instruction sb_instructions[] = {
 
 UJ_Instruction uj_instructions = {"JAL", 0x6F}; // Jump and Link
 
-// Setting Registers
+// =====================================================================================================================
+//
+// Registers & Memory
+//
+// =====================================================================================================================
 
-int registers[32];
+int registers[32]; // virtual register for execution
 
 void initialize_registers() {
     // x0는 항상 0
@@ -104,6 +104,8 @@ void initialize_registers() {
         registers[i] = 0;
     }
 }
+
+int memory[1024] = {0,}; // virtual memory for execution
 
 // =====================================================================================================================
 //
@@ -665,18 +667,18 @@ void process_file(const char *filename) {
 // =====================================================================================================================
 
 int main() {
-    int check_terminate = 0;
+    int terminate_flag = 0;
 
-    initialize_registers();
 
     while (true) {
+        initialize_registers(); // Need to initialize everytime when filename entered
         char filename[MAX_LINE_LENGTH];
         printf("Enter Input File Name: ");
         scanf("%s", filename);
 
-        check_terminate = strcasecmp("terminate", filename);
+        terminate_flag = strcasecmp("terminate", filename);
 
-        if (check_terminate == 0) {
+        if (terminate_flag == 0) {
             break;
         }
 
