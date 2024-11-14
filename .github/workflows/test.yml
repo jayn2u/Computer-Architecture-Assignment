@@ -25,7 +25,7 @@ jobs:
 
       - name: Check test1.o
         run: |
-          if diff -q test1.o test1._answer.o; then
+          if diff -q test1.o test1_answer.o; then
             echo "test1.o success."
           else
             echo "test1.o fail."
@@ -34,7 +34,7 @@ jobs:
 
       - name: Check test1.trace
         run: |
-          if diff -q test1.trace test1._answer.trace; then
+          if diff -q test1.trace test1_answer.trace; then
             echo "test1.trace success."
           else
             echo "test1.trace fail."
@@ -43,7 +43,7 @@ jobs:
 
       - name: Check test2.o
         run: |
-          if diff -q test2.o test2._answer.o; then
+          if diff -q test2.o test2_answer.o; then
             echo "test2.o success."
           else
             echo "test2.o fail."
@@ -52,16 +52,16 @@ jobs:
 
       - name: Check test2.trace
         run: |
-          if diff -q test2.o test2._answer.o; then
-            echo "test2.o success."
+          if diff -q test2.trace test._answer.trace; then
+            echo "test2.trace success."
           else
-            echo "test2.o fail."
+            echo "test2.trace fail."
             exit 1
           fi
 
       - name: Check test3.o
         run: |
-          if diff -q test3.o test3._answer.o; then
+          if diff -q test3.o test3_answer.o; then
             echo "test3.o success."
           else
             echo "test3.o fail."
@@ -70,7 +70,7 @@ jobs:
 
       - name: Check test3.trace
         run: |
-          if diff -q test3.o test3._answer.o; then
+          if diff -q test3.trace test3_answer.trace; then
             echo "test3.trace success"
           else
             echo "test3.trace fail"
