@@ -325,38 +325,23 @@ void execute_r_type(const R_Instruction *instr, const int rd, const int rs1, con
 // Execution functions for R type instruction
 void execute_i_type(const I_Instruction *instr, const int rd, const int rs1, const int imm, FILE *trace,
                     int *pc_ptr, int *pc_location_ptr) {
-    int shamt;
-
     // Case for JARL instruction only
     if (instr->opcode == 0x67) {
         // JALR opcode
-        // 현재 PC + 4를 rd에 저장
-        registers[rd] = *pc_ptr + 4;
-
-        // 점프할 주소 계산 (rs1 + immediate)
-        int jump_addr = registers[rs1] + imm;
-
-        // 최하위 비트는 0으로 설정 (word alignment)
-        jump_addr = jump_addr & ~1;
 
         fprintf_pc_into_trace_file(trace, pc_ptr);
 
-        // PC 업데이트
-        *pc_ptr = jump_addr;
+        registers[rd] = registers[rs1] + imm;
 
-        // TODO: pc_location 조정 코드
-        int size = sizeof(labels) / sizeof(labels[0]);
+        *pc_location_ptr = registers[rd];
 
-        for (int i = 0; i < size; i++) {
-            if (*pc_ptr == labels[i].pc_address) {
-                *pc_location_ptr = labels[i].pc_address;
-                break;
-            }
-        }
+        // FIXME: 분기시점의 PC 값으로 되돌아가야 함.
+        *pc_ptr += 4;
     }
 
     // Case for opcode 0x13
     else if (instr->opcode == 0x13) {
+        int shamt = 0;
         switch (instr->funct3) {
             case 0x0: // Case for ADDI
                 registers[rd] = registers[rs1] + imm;
@@ -477,7 +462,7 @@ void execute_sb_type(const SB_Instruction *instr, const int rs1, const int rs2,
         fprintf_pc_into_trace_file(trace, pc_ptr);
         *pc_ptr = *pc_ptr + imm;
 
-        int size = sizeof(labels) / sizeof(labels[0]);
+        const int size = sizeof(labels) / sizeof(labels[0]);
 
         for (int i = 0; i < size; i++) {
             if (*pc_ptr == labels[i].pc_address) {
@@ -493,8 +478,21 @@ void execute_sb_type(const SB_Instruction *instr, const int rs1, const int rs2,
     }
 }
 
-void execute_uj_type(const UJ_Instruction *instr, const int rd, int imm, FILE *trace, int *pc, int *pc_location) {
+void execute_uj_type(const UJ_Instruction *instr, const int rd, const int imm, FILE *trace, int *pc_ptr,
+                     int *pc_location_ptr) {
     // TODO: JAL instruction execution code
+
+    fprintf_pc_into_trace_file(trace, pc_ptr);
+    registers[rd] = *pc_location_ptr + 1; // 프로시저 호출 다음 명령어 위치
+    *pc_ptr = *pc_ptr + imm;
+
+    const int size = sizeof(labels) / sizeof(labels[0]);
+    for (int i = 0; i < size; i++) {
+        if (*pc_ptr == labels[i].pc_address) {
+            *pc_location_ptr = labels[i].instruction_index;
+            break;
+        }
+    }
 }
 
 
@@ -749,11 +747,11 @@ void trace_pc(const char *filename) {
             int is_LW = strcasecmp(instruction_name, "LW"); // compare does instruction is LW
             int is_JARL = strcasecmp(instruction_name, "JALR");
 
+            const I_Instruction *i_instr = find_i_instruction(instruction_name);
+
             if (is_LW == 0) {
-                const I_Instruction *i_instr = find_i_instruction(instruction_name); // return only LW instruction
                 execute_i_type(i_instr, rd, rs1, imm, trace, &pc, &pc_location);
             } else if (is_JARL == 0) {
-                const I_Instruction *i_instr = find_i_instruction(instruction_name);
                 execute_i_type(i_instr, rd, rs1, imm, trace, &pc, &pc_location);
             } else {
                 // SW case
@@ -796,6 +794,7 @@ void trace_pc(const char *filename) {
         // EXIT
         else if (sscanf(line, "%s", instruction_name) == 1) {
             if (strcasecmp(instruction_name, "EXIT") == 0) {
+                fprintf_pc_into_trace_file(trace, &pc);
                 fclose(trace);
                 return;
             }
