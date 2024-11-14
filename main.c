@@ -92,6 +92,7 @@ UJ_Instruction uj_instructions = {"JAL", 0x6F}; // Jump and Link
 // =====================================================================================================================
 
 int registers[32]; // virtual register for execution
+int return_pc = 0; // FIXME: 전역 변수로 사용하는 것이 옳은 선택인가?
 
 void initialize_registers() {
     // x0는 항상 0
@@ -335,7 +336,7 @@ void execute_i_type(const I_Instruction *instr, const int rd, const int rs1, con
 
         *pc_location_ptr = registers[rd];
 
-        // FIXME: 분기시점의 PC 값으로 되돌아가야 함.
+        *pc_ptr = return_pc;
         *pc_ptr += 4;
     }
 
@@ -480,9 +481,8 @@ void execute_sb_type(const SB_Instruction *instr, const int rs1, const int rs2,
 
 void execute_uj_type(const UJ_Instruction *instr, const int rd, const int imm, FILE *trace, int *pc_ptr,
                      int *pc_location_ptr) {
-    // TODO: JAL instruction execution code
-
     fprintf_pc_into_trace_file(trace, pc_ptr);
+    return_pc = *pc_ptr;
     registers[rd] = *pc_location_ptr + 1; // 프로시저 호출 다음 명령어 위치
     *pc_ptr = *pc_ptr + imm;
 
