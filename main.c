@@ -710,7 +710,6 @@ void trace_pc(const char *filename) {
         index++;
     }
 
-    // FIXME: procedure를 사용한 어셈블리에서 동작하는 코드 작성
     for (int pc_location = 0; pc_location < index;) {
         char instruction_name[MAX_LINE_LENGTH] = {0,};
         char jump_label_name[MAX_LINE_LENGTH] = {0,};
@@ -815,6 +814,8 @@ void trace_pc(const char *filename) {
 // 메인 함수
 //
 // =====================================================================================================================
+
+// TODO: 잘못된 형식의 어셈블리 명령어라면 Syntax Error 출력하고 다시 입력 대기 상태 코드 설계
 
 int main() {
     int terminate_flag = 0;
