@@ -4,3 +4,4 @@
 temp.s
 
 .DS_Store
+/cmake-build-debug/
