@@ -11,14 +11,68 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install GCC
-      run: sudo apt-get install -y gcc
+      - name: Install GCC
+        run: sudo apt-get install -y gcc
 
-    - name: Compile C File
-      run: gcc main.c -o main
+      - name: Compile C File
+        run: gcc main.c -o main
 
-    - name: Run Compiled Program
-      run: echo -e "test1.s\ntest2.s\ntest3.s\nterminate" | ./main
+      - name: Run Compiled Program
+        run: echo -e "test1.s\ntest2.s\ntest3.s\nterminate" | ./main
+
+      - name: Check test1.o
+        run: |
+          if diff -q test1.o test1._answer.o; then
+            echo "test1.o success."
+          else
+            echo "test1.o fail."
+            exit 1
+          fi
+
+      - name: Check test1.trace
+        run: |
+          if diff -q test1.trace test1._answer.trace; then
+            echo "test1.trace success."
+          else
+            echo "test1.trace fail."
+            exit 1
+          fi
+
+      - name: Check test2.o
+        run: |
+          if diff -q test2.o test2._answer.o; then
+            echo "test2.o success."
+          else
+            echo "test2.o fail."
+            exit 1
+          fi
+
+      - name: Check test2.trace
+        run: |
+          if diff -q test2.o test2._answer.o; then
+            echo "test2.o success."
+          else
+            echo "test2.o fail."
+            exit 1
+          fi
+
+      - name: Check test3.o
+        run: |
+          if diff -q test3.o test3._answer.o; then
+            echo "test3.o success."
+          else
+            echo "test3.o fail."
+            exit 1
+          fi
+
+      - name: Check test3.trace
+        run: |
+          if diff -q test3.o test3._answer.o; then
+            echo "test3.trace success"
+          else
+            echo "test3.trace fail"
+            exit 1
+          fi
