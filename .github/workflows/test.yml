@@ -52,7 +52,7 @@ jobs:
 
       - name: Check test2.trace
         run: |
-          if diff -q test2.trace test._answer.trace; then
+          if diff -q test2.trace test2_answer.trace; then
             echo "test2.trace success."
           else
             echo "test2.trace fail."
