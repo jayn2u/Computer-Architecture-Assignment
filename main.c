@@ -291,8 +291,7 @@ void execute_r_type(const R_Instruction *instr, const int rd, const int rs1, con
             break;
 
         // Case for SRL & SRA
-        case 0x5:
-
+        case 0x5: {
             int shamt = registers[rs2] & 0x1F; // Extract shift amount (lower 5 bits)
 
             if (instr->funct7 == 0x00) {
@@ -304,6 +303,7 @@ void execute_r_type(const R_Instruction *instr, const int rd, const int rs1, con
             }
 
             break;
+        }
 
         // Case for OR
         case 0x6:
@@ -373,7 +373,7 @@ void execute_i_type(const I_Instruction *instr, const int rd, const int rs1, con
 
                 // Case for SRAI
                 else if (instr->funct7 == 0x10) {
-                    registers[rd] = registers[rs1] >> shamt; // FIXME: 레지스터를 사용하는 것이 아니라, 메모리를 구현하는 자료형을 사용해야 한다.
+                    registers[rd] = registers[rs1] >> shamt;
                 }
 
                 break;
@@ -878,12 +878,12 @@ int main() {
             continue;
         }
 
-        record_label(filename);
+        const int syntax_error_flag = have_syntax_error_instruction(filename);
 
-        int syntax_error_flag = have_syntax_error_instruction(filename);
         if (syntax_error_flag == 1) {
             printf("Syntax Error!!\n");
         } else {
+            record_label(filename);
             translate_assembly_instruction(filename);
             trace_pc(filename);
         }
