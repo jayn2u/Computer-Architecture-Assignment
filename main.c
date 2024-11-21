@@ -364,18 +364,17 @@ void execute_i_type(const I_Instruction *instr, const int rd, const int rs1, con
                 break;
 
             case 0x5: // Case for SRLI & SRAI
-                // Reassign into shamt variable for better readability
-                shamt = imm;
-
-                if (instr->funct7 == 0x0) {
-                    registers[rd] = registers[rs1] >> shamt;
+                shamt = imm & 0x1F; // shamt is lower 5 bits of imm
+                if (instr->funct7 == 0x00) {
+                    // SRLI (Shift Right Logical Immediate)
+                    registers[rd] = (uint32_t) registers[rs1] >> shamt;
+                } else if (instr->funct7 == 0x20) {
+                    // SRAI (Shift Right Arithmetic Immediate)
+                    registers[rd] = (int32_t) registers[rs1] >> shamt;
+                } else {
+                    // Invalid instruction
+                    printf("Invalid funct7 for shift instruction\n");
                 }
-
-                // Case for SRAI
-                else if (instr->funct7 == 0x10) {
-                    registers[rd] = registers[rs1] >> shamt;
-                }
-
                 break;
         }
 
