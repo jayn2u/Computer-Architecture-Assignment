@@ -34,6 +34,12 @@ jobs:
             echo "test1.o fail."
             exit 1
           fi
+      - name: Print test1.o diff
+        run: diff test1.o test1_answer.o
+
+      - name: Print test1.trace diff
+        run: diff test1.trace test1_answer.trace
+
       - name: Check test1.trace
         run: |
           if diff -q test1.trace test1_answer.trace; then
@@ -58,6 +64,13 @@ jobs:
             echo "test2.trace fail."
             exit 1
           fi
+
+      - name: Print test2.o diff
+        run: diff test2.o test2_answer.o
+
+      - name: Print test2.trace diff
+        run: diff test2.trace test2_answer.trace
+
       - name: Check test3.o
         run: |
           if diff -q test3.o test3_answer.o; then
@@ -66,6 +79,7 @@ jobs:
             echo "test3.o fail."
             exit 1
           fi
+
       - name: Check test3.trace
         run: |
           if diff -q test3.trace test3_answer.trace; then
@@ -74,5 +88,12 @@ jobs:
             echo "test3.trace fail"
             exit 1
           fi
+
+      - name: Print test3.o diff
+        run: diff test3.o test3_answer.o
+
+      - name: Print test3.trace diff
+        run: diff test3.trace test3_answer.trace
+
       - name: Terminate Command
         run: echo "Terminate"
