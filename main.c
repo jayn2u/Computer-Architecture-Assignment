@@ -92,7 +92,7 @@ UJ_Instruction uj_instructions = {"JAL", 0x6F}; // Jump and Link
 // =====================================================================================================================
 
 int registers[32]; // virtual register for execution
-int return_pc = 0; // FIXME: 전역 변수로 사용하는 것이 옳은 선택인가?
+int return_pc = 0;
 
 void initialize_registers() {
     // x0는 항상 0
@@ -292,16 +292,14 @@ void execute_r_type(const R_Instruction *instr, const int rd, const int rs1, con
         // Case for SRL & SRA
         case 0x5:
 
-            // TODO: SRL & SRA 연산은 signed &  중 어떤 자료형을 사용하는지에 따라서 차이점이 발생
+            int shamt = registers[rs2] & 0x1F; // Extract shift amount (lower 5 bits)
 
-            // Case for SRL
-            if (instr->funct7 == 0x0) {
-                registers[rd] = registers[rs1] >> registers[rs2];
-            }
-
-            // Case for SRA
-            else if (instr->funct7 == 0x20) {
-                registers[rd] = registers[rs1] >> registers[rs2];
+            if (instr->funct7 == 0x00) {
+                // SRL (Shift Right Logical)
+                registers[rd] = (uint32_t) registers[rs1] >> shamt; // Logical shift
+            } else if (instr->funct7 == 0x20) {
+                // SRA (Shift Right Arithmetic)
+                registers[rd] = registers[rs1] >> shamt; // Arithmetic shift
             }
 
             break;
@@ -375,8 +373,7 @@ void execute_i_type(const I_Instruction *instr, const int rd, const int rs1, con
 
                 // Case for SRAI
                 else if (instr->funct7 == 0x10) {
-                    // FIXME: 레지스터를 사용하는 것이 아니라, 메모리를 구현하는 자료형을 사용해야 한다.
-                    registers[rd] = registers[rs1] >> shamt;
+                    registers[rd] = registers[rs1] >> shamt; // FIXME: 레지스터를 사용하는 것이 아니라, 메모리를 구현하는 자료형을 사용해야 한다.
                 }
 
                 break;
@@ -502,7 +499,6 @@ void execute_uj_type(const UJ_Instruction *instr, const int rd, const int imm, F
 //
 // =====================================================================================================================
 
-// TODO: 문법에 맞지 않는 어셈블리 명령어 테스트
 int have_syntax_error_instruction(const char *filename) {
     FILE *input_file = fopen(filename, "r");
     char line[MAX_LINE_LENGTH] = {0,};
@@ -730,8 +726,7 @@ void translate_assembly_instruction(const char *filename) {
     fclose(input_file);
     fclose(output);
 
-    // FIXME: 과제 제출 시 해당 코드 제거 요망, 개발 간 확인용
-    printf("Files %s generated successfully.\n", output_file);
+    printf("Files %s generated successfully.\n", output_file); // FIXME: 과제 제출 시 해당 코드 제거 요망, 개발 간 확인용
 }
 
 void trace_pc(const char *filename) {
@@ -852,8 +847,7 @@ void trace_pc(const char *filename) {
 
     fclose(trace);
 
-    // FIXME: 과제 제출 시 해당 코드 제거 요망, 개발 간 확인용
-    printf("Files %s generated successfully.\n", trace_file);
+    printf("Files %s generated successfully.\n", trace_file); // FIXME: 과제 제출 시 해당 코드 제거 요망, 개발 간 확인용
 }
 
 // =====================================================================================================================
@@ -861,8 +855,6 @@ void trace_pc(const char *filename) {
 // 메인 함수
 //
 // =====================================================================================================================
-
-// TODO: 잘못된 형식의 어셈블리 명령어라면 Syntax Error 출력하고 다시 입력 대기 상태 코드 설계
 
 int main() {
     int terminate_flag = 0;
