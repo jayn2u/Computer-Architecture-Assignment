@@ -23,8 +23,8 @@ jobs:
       - name: Input wrong file name
         run: echo "some_file.s"
 
-      - name: Run test1.s Program
-        run: echo "test1.s"
+      - name: Test test1.s
+        run: echo -e "test1.s"
 
       - name: Check test1.o
         run: |
@@ -44,8 +44,8 @@ jobs:
             exit 1
           fi
 
-      - name: Run test2.s Program
-        run: echo "test2.s"
+      - name: Test test2.s
+        run: echo -e "test2.s"
 
       - name: Check test2.o
         run: |
@@ -65,8 +65,8 @@ jobs:
             exit 1
           fi
 
-      - name: Run test3.s Program
-        run: echo "test3.s"
+      - name: Test test3.s
+        run: echo -e "test3.s"
 
       - name: Check test3.o
         run: |
