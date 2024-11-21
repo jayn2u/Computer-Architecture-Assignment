@@ -385,13 +385,22 @@ void execute_i_type(const I_Instruction *instr, const int rd, const int rs1, con
     }
 
     // Case for opcode is 0x3
-    else if (instr->opcode == 0x3) {
-        // Case for LW
+    else if (instr->opcode == 0x03) {
+        // LW 명령어 처리
         switch (instr->funct3) {
-            case 0x2:
-                registers[rd] = *(&registers[rs1] + (imm * 4));
+            case 0x2: {
+                const int address = registers[rs1] + imm;
+                const int word_address = address >> 2;
+
+                if (word_address >= 0 && word_address < 1024) {
+                    registers[rd] = memory[word_address];
+                } else {
+                    printf("Memory access error: address out of bounds\n");
+                }
                 break;
+            }
             default:
+                printf("Unsupported funct3 for LW instruction\n");
                 break;
         }
 
@@ -404,18 +413,15 @@ void execute_i_type(const I_Instruction *instr, const int rd, const int rs1, con
 // Execution functions for S type instruction
 void execute_s_type(const S_Instruction *instr, const int rs2, const int rs1,
                     const int imm, FILE *trace, int *pc_ptr, int *pc_location_ptr) {
-    // SW 명령어 실행
     if (instr->funct3 == 0x2) {
-        // SW의 funct3는 0x2
+        // SW 명령어 처리
         int address = registers[rs1] + imm;
-        // 주소를 워드 단위로 변환 (4로 나눔)
-        int word_address = address >> 2;
+        int word_address = address >> 2; // 4로 나누기
 
-        // 메모리 범위 체크
-        if (word_address < 1024) {
+        // 메모리 범위 확인
+        if (word_address >= 0 && word_address < 1024) {
             memory[word_address] = registers[rs2];
         } else {
-            // 메모리 범위 초과 에러 처리
             printf("Memory access error: address out of bounds\n");
         }
     }
