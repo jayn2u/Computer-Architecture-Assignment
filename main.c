@@ -731,7 +731,7 @@ void translate_assembly_instruction(const char *filename) {
     fclose(input_file);
     fclose(output);
 
-    printf("Files %s generated successfully.\n", output_file); // FIXME: 과제 제출 시 해당 코드 제거 요망, 개발 간 확인용
+    // printf("Files %s generated successfully.\n", output_file);
 }
 
 void trace_pc(const char *filename) {
@@ -852,7 +852,7 @@ void trace_pc(const char *filename) {
 
     fclose(trace);
 
-    printf("Files %s generated successfully.\n", trace_file); // FIXME: 과제 제출 시 해당 코드 제거 요망, 개발 간 확인용
+    // printf("Files %s generated successfully.\n", trace_file);
 }
 
 // =====================================================================================================================
