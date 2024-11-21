@@ -23,6 +23,9 @@ jobs:
       - name: Run Compiled Program
         run: echo -e "test1.s\ntest2.s\ntest3.s\nterminate" | ./main
 
+      - name: Input wrong file name
+        run: echo "some_file.s"
+
       - name: Check test1.o
         run: |
           if diff -q test1.o test1_answer.o; then
@@ -76,3 +79,6 @@ jobs:
             echo "test3.trace fail"
             exit 1
           fi
+
+      - name: Terminate Command
+        run: Terminate

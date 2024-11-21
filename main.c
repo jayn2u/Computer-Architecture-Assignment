@@ -502,6 +502,53 @@ void execute_uj_type(const UJ_Instruction *instr, const int rd, const int imm, F
 //
 // =====================================================================================================================
 
+// TODO: 문법에 맞지 않는 어셈블리 명령어 테스트
+int have_syntax_error_instruction(const char *filename) {
+    FILE *input_file = fopen(filename, "r");
+    char line[MAX_LINE_LENGTH] = {0,};
+
+    while (fgets(line, sizeof(line), input_file)) {
+        char procedure_name[MAX_LINE_LENGTH] = {0,};
+        char jump_label_name[MAX_LINE_LENGTH] = {0,};
+        char instruction_name[MAX_LINE_LENGTH] = {0,};
+        int rd = 0, rs1 = 0, rs2 = 0, imm = 0;
+
+        if (sscanf(line, "%s x%d, x%d, x%d", instruction_name, &rd, &rs1, &rs2) == 4) {
+            const R_Instruction *r_instr = find_r_instruction(instruction_name);
+            if (r_instr == NULL) {
+                return 1;
+            }
+        } else if (sscanf(line, "%s x%d, x%d, %d", instruction_name, &rd, &rs1, &imm) == 4) {
+            const I_Instruction *i_instr = find_i_instruction(instruction_name);
+            if (i_instr == NULL) {
+                return 1;
+            }
+        } else if (sscanf(line, "%s x%d, %d(x%d)", instruction_name, &rd, &imm, &rs1) == 4) {
+            const I_Instruction *i_instr = find_i_instruction(instruction_name); // Return LW only
+            const S_Instruction *s_instr = find_s_instruction(instruction_name); // Return SW only
+
+            if (i_instr == NULL) {
+                if (s_instr != NULL) {
+                    continue;
+                }
+                return 1;
+            }
+        } else if (sscanf(line, "%s x%d, x%d, %s", instruction_name, &rs1, &rs2, jump_label_name) == 4) {
+            const SB_Instruction *sb_instr = find_sb_instruction(instruction_name);
+            if (sb_instr == NULL) {
+                return 1;
+            }
+        } else if (sscanf(line, "%s x%d, %s", instruction_name, &rd, procedure_name) == 3) {
+            const UJ_Instruction *uj_instr = find_uj_instruction(instruction_name);
+            if (uj_instr == NULL) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
 void record_label(const char *filename) {
     FILE *input_file = fopen(filename, "r");
 
@@ -556,9 +603,9 @@ void translate_assembly_instruction(const char *filename) {
     int pc = STARTING_PC;
 
     while (fgets(line, sizeof(line), input_file)) {
-        char instruction_name[MAX_LINE_LENGTH];
-        char jump_label_name[MAX_LINE_LENGTH];
-        char procedure_name[MAX_LINE_LENGTH];
+        char instruction_name[MAX_LINE_LENGTH] = {0,};
+        char jump_label_name[MAX_LINE_LENGTH] = {0,};
+        char procedure_name[MAX_LINE_LENGTH] = {0,};
         int rd = 0, rs1 = 0, rs2 = 0, imm = 0;
         int machine_code = 0;
 
@@ -822,7 +869,7 @@ int main() {
 
     while (true) {
         initialize_registers(); // Need to initialize everytime when filename entered
-        char filename[MAX_LINE_LENGTH];
+        char filename[MAX_LINE_LENGTH] = {0,};
         printf("Enter Input File Name: ");
         scanf("%s", filename);
 
@@ -840,8 +887,14 @@ int main() {
         }
 
         record_label(filename);
-        translate_assembly_instruction(filename);
-        trace_pc(filename);
+
+        int syntax_error_flag = have_syntax_error_instruction(filename);
+        if (syntax_error_flag == 1) {
+            printf("Syntax Error!!\n");
+        } else {
+            translate_assembly_instruction(filename);
+            trace_pc(filename);
+        }
     }
 
     return 0;
