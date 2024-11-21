@@ -21,7 +21,7 @@ jobs:
         run: gcc main.c -o main
 
       - name: Input wrong file name
-        run: echo "some_file.s" | ./main
+        run: echo -e "some_file.s\nterminate" | ./main
 
       - name: Run Compiled Program
         run: echo -e "test1.s\ntest2.s\ntest3.s\nterminate" | ./main
