@@ -2,7 +2,7 @@ ADD x7, x1, x2
 SUB x8, x3, x4
 AND x9, x5, x6
 OR x10, x7, x8
-XOR x11, x9, x1
+XOR x11, x9, x10
 ANDI x12, x11, 11
 ORI x13, x12, 15
 XORI x14, x13, 12
