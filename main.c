@@ -430,7 +430,6 @@ void execute_s_type(const S_Instruction *instr, const int rs2, const int rs1,
     *pc_ptr += 4;
 }
 
-
 // Execution functions for SB type instruction
 void execute_sb_type(const SB_Instruction *instr, const int rs1, const int rs2,
                      const int imm, FILE *trace, int *pc_ptr, int *pc_location_ptr) {
@@ -496,7 +495,6 @@ void execute_uj_type(const UJ_Instruction *instr, const int rd, const int imm, F
         }
     }
 }
-
 
 // =====================================================================================================================
 //
@@ -609,7 +607,6 @@ void translate_assembly_instruction(const char *filename) {
         char procedure_name[MAX_LINE_LENGTH] = {0,};
         int rd = 0, rs1 = 0, rs2 = 0, imm = 0;
         int machine_code = 0;
-
 
         if (sscanf(line, "%s x%d, x%d, x%d", instruction_name, &rd, &rs1, &rs2) == 4) {
             const R_Instruction *r_instr = find_r_instruction(instruction_name);
