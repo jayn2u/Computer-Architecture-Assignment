@@ -81,4 +81,4 @@ jobs:
           fi
 
       - name: Terminate Command
-        run: Terminate
+        run: echo "Terminate"
