@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #define MAX_LINE_LENGTH 50 // 사용자에게서 입력받는 파일이름 크기 최댓값
 
@@ -303,7 +304,6 @@ void execute_r_type(const R_Instruction *instr, const int rd, const int rs1, con
             }
 
             break;
-
 
         // Case for OR
         case 0x6:
