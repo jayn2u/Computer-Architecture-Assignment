@@ -842,7 +842,6 @@ void trace_pc(const char *filename) {
             if (strcasecmp(instruction_name, "EXIT") == 0) {
                 fprintf_pc_into_trace_file(trace, &pc);
                 fclose(trace);
-                printf("Files %s generated successfully.\n", trace_file);
                 return;
             }
 
