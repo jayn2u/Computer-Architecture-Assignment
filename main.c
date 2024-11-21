@@ -207,6 +207,12 @@ void print_binary_to_file(int n, FILE *file) {
     fprintf(file, "\n");
 }
 
+// 부호 확장 함수 추가
+int sign_extend_imm(int imm, int bits) {
+    int mask = 1 << (bits - 1);
+    return (imm ^ mask) - mask;
+}
+
 // S type 명령어에서 imm를 분리
 void parse_imm_for_s_type_inst(const int imm, int *imm1, int *imm2) {
     // imm1에는 상위 비트 imm[11:5] 저장
@@ -217,12 +223,17 @@ void parse_imm_for_s_type_inst(const int imm, int *imm1, int *imm2) {
 }
 
 // SB 타입 명령어에서 imm을 분리
-void parse_imm_for_sb_type_inst(const int imm, int *imm1, int *imm2) {
-    // imm1에는 imm[12]와 imm[10:5]를 저장
-    *imm1 = ((imm >> 5) & 0x3F) | ((imm >> 12) & 0x1) << 6; // 6비트와 1비트를 결합하여 imm[12:5] 추출
+void parse_imm_for_sb_type_inst(int imm, int *imm1, int *imm2) {
+    int imm13 = imm & 0x1FFF; // 13비트 추출
+    imm13 = sign_extend_imm(imm13, 13); // 부호 확장
 
-    // imm2에는 imm[4:1]과 imm[11]을 저장
-    *imm2 = (imm & 0x1E) | ((imm >> 11) & 0x1); // 4비트와 1비트를 결합하여 imm[4:1]과 imm[11] 추출
+    int imm12 = (imm13 >> 12) & 0x1;
+    int imm10_5 = (imm13 >> 5) & 0x3F;
+    int imm4_1 = (imm13 >> 1) & 0xF;
+    int imm11 = (imm13 >> 11) & 0x1;
+
+    *imm1 = (imm12 << 6) | imm10_5; // imm[12|10:5]
+    *imm2 = (imm11 << 4) | imm4_1; // imm[11|4:1]
 }
 
 int extract_bits(int imm, int high, int low) {
