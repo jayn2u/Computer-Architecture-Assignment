@@ -24,7 +24,7 @@ jobs:
         run: echo "some_file.s"
 
       - name: Test test1.s
-        run: echo -e "test1.s"
+        run: echo -e "test1.s" | ./main
 
       - name: Check test1.o
         run: |
@@ -45,7 +45,7 @@ jobs:
           fi
 
       - name: Test test2.s
-        run: echo -e "test2.s"
+        run: echo -e "test2.s" | ./main
 
       - name: Check test2.o
         run: |
@@ -66,7 +66,7 @@ jobs:
           fi
 
       - name: Test test3.s
-        run: echo -e "test3.s"
+        run: echo -e "test3.s" | ./main
 
       - name: Check test3.o
         run: |
