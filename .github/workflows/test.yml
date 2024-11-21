@@ -20,11 +20,11 @@ jobs:
       - name: Compile C File
         run: gcc main.c -o main
 
-      - name: Run Compiled Program
-        run: echo -e "test1.s\ntest2.s\ntest3.s\nterminate" | ./main
-
       - name: Input wrong file name
         run: echo "some_file.s"
+
+      - name: Run test1.s Program
+        run: echo "test1.s"
 
       - name: Check test1.o
         run: |
@@ -44,6 +44,9 @@ jobs:
             exit 1
           fi
 
+      - name: Run test2.s Program
+        run: echo "test2.s"
+
       - name: Check test2.o
         run: |
           if diff -q test2.o test2_answer.o; then
@@ -61,6 +64,9 @@ jobs:
             echo "test2.trace fail."
             exit 1
           fi
+
+      - name: Run test3.s Program
+        run: echo "test3.s"
 
       - name: Check test3.o
         run: |
