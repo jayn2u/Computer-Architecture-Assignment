@@ -21,10 +21,10 @@ jobs:
         run: gcc main.c -o main
 
       - name: Input wrong file name
-        run: echo "some_file.s"
+        run: echo "some_file.s" | ./main
 
-      - name: Test test1.s
-        run: echo -e "test1.s" | ./main
+      - name: Run Compiled Program
+        run: echo -e "test1.s\ntest2.s\ntest3.s\nterminate" | ./main
 
       - name: Check test1.o
         run: |
@@ -34,7 +34,6 @@ jobs:
             echo "test1.o fail."
             exit 1
           fi
-
       - name: Check test1.trace
         run: |
           if diff -q test1.trace test1_answer.trace; then
@@ -43,10 +42,6 @@ jobs:
             echo "test1.trace fail."
             exit 1
           fi
-
-      - name: Test test2.s
-        run: echo -e "test2.s" | ./main
-
       - name: Check test2.o
         run: |
           if diff -q test2.o test2_answer.o; then
@@ -55,7 +50,6 @@ jobs:
             echo "test2.o fail."
             exit 1
           fi
-
       - name: Check test2.trace
         run: |
           if diff -q test2.trace test2_answer.trace; then
@@ -64,10 +58,6 @@ jobs:
             echo "test2.trace fail."
             exit 1
           fi
-
-      - name: Test test3.s
-        run: echo -e "test3.s" | ./main
-
       - name: Check test3.o
         run: |
           if diff -q test3.o test3_answer.o; then
@@ -76,7 +66,6 @@ jobs:
             echo "test3.o fail."
             exit 1
           fi
-
       - name: Check test3.trace
         run: |
           if diff -q test3.trace test3_answer.trace; then
@@ -85,6 +74,5 @@ jobs:
             echo "test3.trace fail"
             exit 1
           fi
-
       - name: Terminate Command
         run: echo "Terminate"
