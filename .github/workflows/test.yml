@@ -31,14 +31,14 @@ jobs:
 
       # 기존 테스트 케이스 1
       - name: Print test1.o diff
-        run: diff test1.o test1_answer.o
+        run: diff test1.o test1_ans.o
 
       - name: Print test1.trace diff
-        run: diff test1.trace test1_answer.trace
+        run: diff test1.trace test1_ans.trace
 
       - name: Check test1.o
         run: |
-          if diff -q test1.o test1_answer.o; then
+          if diff -q test1.o test1_ans.o; then
             echo "test1.o success."
           else
             echo "test1.o fail."
@@ -47,7 +47,7 @@ jobs:
 
       - name: Check test1.trace
         run: |
-          if diff -q test1.trace test1_answer.trace; then
+          if diff -q test1.trace test1_ans.trace; then
             echo "test1.trace success."
           else
             echo "test1.trace fail."
@@ -56,14 +56,14 @@ jobs:
 
       # 기존 테스트 케이스 2
       - name: Print test2.o diff
-        run: diff test2.o test2_answer.o
+        run: diff test2.o test2_ans.o
 
       - name: Print test2.trace diff
-        run: diff test2.trace test2_answer.trace
+        run: diff test2.trace test2_ans.trace
 
       - name: Check test2.o
         run: |
-          if diff -q test2.o test2_answer.o; then
+          if diff -q test2.o test2_ans.o; then
             echo "test2.o success."
           else
             echo "test2.o fail."
@@ -72,7 +72,7 @@ jobs:
 
       - name: Check test2.trace
         run: |
-          if diff -q test2.trace test2_answer.trace; then
+          if diff -q test2.trace test2_ans.trace; then
             echo "test2.trace success."
           else
             echo "test2.trace fail."
@@ -81,14 +81,14 @@ jobs:
 
       # 기존 테스트 케이스 3
       - name: Print test3.o diff
-        run: diff test3.o test3_answer.o
+        run: diff test3.o test3_ans.o
 
       - name: Print test3.trace diff
-        run: diff test3.trace test3_answer.trace
+        run: diff test3.trace test3_ans.trace
 
       - name: Check test3.o
         run: |
-          if diff -q test3.o test3_answer.o; then
+          if diff -q test3.o test3_ans.o; then
             echo "test3.o success."
           else
             echo "test3.o fail."
@@ -97,7 +97,7 @@ jobs:
 
       - name: Check test3.trace
         run: |
-          if diff -q test3.trace test3_answer.trace; then
+          if diff -q test3.trace test3_ans.trace; then
             echo "test3.trace success."
           else
             echo "test3.trace fail."
@@ -106,14 +106,14 @@ jobs:
 
       # 새로운 테스트 케이스 1
       - name: Print testcase1.o diff
-        run: diff testcase1.o testcase1_answer.o
+        run: diff testcase1.o testcase1_ans.o
 
       - name: Print testcase1.trace diff
-        run: diff testcase1.trace testcase1_answer.trace
+        run: diff testcase1.trace testcase1_ans.trace
 
       - name: Check testcase1.o
         run: |
-          if diff -q testcase1.o testcase1_answer.o; then
+          if diff -q testcase1.o testcase1_ans.o; then
             echo "testcase1.o success."
           else
             echo "testcase1.o fail."
@@ -122,7 +122,7 @@ jobs:
 
       - name: Check testcase1.trace
         run: |
-          if diff -q testcase1.trace testcase1_answer.trace; then
+          if diff -q testcase1.trace testcase1_ans.trace; then
             echo "testcase1.trace success."
           else
             echo "testcase1.trace fail."
@@ -131,14 +131,14 @@ jobs:
 
       # 새로운 테스트 케이스 2
       - name: Print testcase2.o diff
-        run: diff testcase2.o testcase2_answer.o
+        run: diff testcase2.o testcase2_ans.o
 
       - name: Print testcase2.trace diff
-        run: diff testcase2.trace testcase2_answer.trace
+        run: diff testcase2.trace testcase2_ans.trace
 
       - name: Check testcase2.o
         run: |
-          if diff -q testcase2.o testcase2_answer.o; then
+          if diff -q testcase2.o testcase2_ans.o; then
             echo "testcase2.o success."
           else
             echo "testcase2.o fail."
@@ -147,7 +147,7 @@ jobs:
 
       - name: Check testcase2.trace
         run: |
-          if diff -q testcase2.trace testcase2_answer.trace; then
+          if diff -q testcase2.trace testcase2_ans.trace; then
             echo "testcase2.trace success."
           else
             echo "testcase2.trace fail."
@@ -156,14 +156,14 @@ jobs:
 
       # 새로운 테스트 케이스 3
       - name: Print testcase3.o diff
-        run: diff testcase3.o testcase3_answer.o
+        run: diff testcase3.o testcase3_ans.o
 
       - name: Print testcase3.trace diff
-        run: diff testcase3.trace testcase3_answer.trace
+        run: diff testcase3.trace testcase3_ans.trace
 
       - name: Check testcase3.o
         run: |
-          if diff -q testcase3.o testcase3_answer.o; then
+          if diff -q testcase3.o testcase3_ans.o; then
             echo "testcase3.o success."
           else
             echo "testcase3.o fail."
@@ -172,7 +172,7 @@ jobs:
 
       - name: Check testcase3.trace
         run: |
-          if diff -q testcase3.trace testcase3_answer.trace; then
+          if diff -q testcase3.trace testcase3_ans.trace; then
             echo "testcase3.trace success."
           else
             echo "testcase3.trace fail."
@@ -181,14 +181,14 @@ jobs:
 
       # 새로운 테스트 케이스 4
       - name: Print testcase4.o diff
-        run: diff testcase4.o testcase4_answer.o
+        run: diff testcase4.o testcase4_ans.o
 
       - name: Print testcase4.trace diff
-        run: diff testcase4.trace testcase4_answer.trace
+        run: diff testcase4.trace testcase4_ans.trace
 
       - name: Check testcase4.o
         run: |
-          if diff -q testcase4.o testcase4_answer.o; then
+          if diff -q testcase4.o testcase4_ans.o; then
             echo "testcase4.o success."
           else
             echo "testcase4.o fail."
@@ -197,7 +197,7 @@ jobs:
 
       - name: Check testcase4.trace
         run: |
-          if diff -q testcase4.trace testcase4_answer.trace; then
+          if diff -q testcase4.trace testcase4_ans.trace; then
             echo "testcase4.trace success."
           else
             echo "testcase4.trace fail."
@@ -206,14 +206,14 @@ jobs:
 
       # 새로운 테스트 케이스 5
       - name: Print testcase5.o diff
-        run: diff testcase5.o testcase5_answer.o
+        run: diff testcase5.o testcase5_ans.o
 
       - name: Print testcase5.trace diff
-        run: diff testcase5.trace testcase5_answer.trace
+        run: diff testcase5.trace testcase5_ans.trace
 
       - name: Check testcase5.o
         run: |
-          if diff -q testcase5.o testcase5_answer.o; then
+          if diff -q testcase5.o testcase5_ans.o; then
             echo "testcase5.o success."
           else
             echo "testcase5.o fail."
@@ -222,7 +222,7 @@ jobs:
 
       - name: Check testcase5.trace
         run: |
-          if diff -q testcase5.trace testcase5_answer.trace; then
+          if diff -q testcase5.trace testcase5_ans.trace; then
             echo "testcase5.trace success."
           else
             echo "testcase5.trace fail."
@@ -231,14 +231,14 @@ jobs:
 
       # 새로운 테스트 케이스 6
       - name: Print testcase6.o diff
-        run: diff testcase6.o testcase6_answer.o
+        run: diff testcase6.o testcase6_ans.o
 
       - name: Print testcase6.trace diff
-        run: diff testcase6.trace testcase6_answer.trace
+        run: diff testcase6.trace testcase6_ans.trace
 
       - name: Check testcase6.o
         run: |
-          if diff -q testcase6.o testcase6_answer.o; then
+          if diff -q testcase6.o testcase6_ans.o; then
             echo "testcase6.o success."
           else
             echo "testcase6.o fail."
@@ -247,7 +247,7 @@ jobs:
 
       - name: Check testcase6.trace
         run: |
-          if diff -q testcase6.trace testcase6_answer.trace; then
+          if diff -q testcase6.trace testcase6_ans.trace; then
             echo "testcase6.trace success."
           else
             echo "testcase6.trace fail."
@@ -256,14 +256,14 @@ jobs:
 
       # 새로운 테스트 케이스 7
       - name: Print testcase7.o diff
-        run: diff testcase7.o testcase7_answer.o
+        run: diff testcase7.o testcase7_ans.o
 
       - name: Print testcase7.trace diff
-        run: diff testcase7.trace testcase7_answer.trace
+        run: diff testcase7.trace testcase7_ans.trace
 
       - name: Check testcase7.o
         run: |
-          if diff -q testcase7.o testcase7_answer.o; then
+          if diff -q testcase7.o testcase7_ans.o; then
             echo "testcase7.o success."
           else
             echo "testcase7.o fail."
@@ -272,7 +272,7 @@ jobs:
 
       - name: Check testcase7.trace
         run: |
-          if diff -q testcase7.trace testcase7_answer.trace; then
+          if diff -q testcase7.trace testcase7_ans.trace; then
             echo "testcase7.trace success."
           else
             echo "testcase7.trace fail."
