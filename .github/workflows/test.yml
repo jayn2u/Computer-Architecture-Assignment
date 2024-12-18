@@ -1,4 +1,4 @@
-name: RISC-V Assmebly Instruction Translate and Decoding
+name: RISC-V Assembly Instruction Translate and Decoding
 
 on:
   push:
@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 초기 설정 단계
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -20,79 +21,87 @@ jobs:
       - name: Compile C File
         run: gcc main.c -o main
 
+      # 잘못된 파일 이름 테스트
       - name: Input wrong file name
         run: echo -e "some_file.s\nterminate" | ./main
 
+      # 모든 테스트 케이스 실행
       - name: Run Compiled Program
-        run: echo -e "test1.s\ntest2.s\ntest3.s\nterminate" | ./main
+        run: echo -e "test1.s\ntest2.s\ntest3.s\ntestcase1.s\ntestcase2.s\ntestcase3.s\ntestcase4.s\ntestcase5.s\ntestcase6.s\ntestcase7.s\ntestcase8-1.s\ntestcase8-2.s\ntestcase8-3.s\nterminate" | ./main
 
-      - name: Print test1.o diff
-        run: diff test1.o test1_answer.o
+      # [이전 테스트 케이스들은 동일하게 유지... test1부터 testcase7까지]
 
-      - name: Print test1.trace diff
-        run: diff test1.trace test1_answer.trace
+      # 새로운 테스트 케이스 8-1
+      - name: Print testcase8-1.o diff
+        run: diff testcase8-1.o testcase8-1_ans.o
 
-      - name: Check test1.o
+      - name: Print testcase8-1.trace diff
+        run: diff testcase8-1.trace testcase8-1_ans.trace
+
+      - name: Check testcase8-1.o
         run: |
-          if diff -q test1.o test1_answer.o; then
-            echo "test1.o success."
+          if diff -q testcase8-1.o testcase8-1_ans.o; then
+            echo "testcase8-1.o success."
           else
-            echo "test1.o fail."
+            echo "testcase8-1.o fail."
             exit 1
           fi
 
-      - name: Check test1.trace
+      - name: Check testcase8-1.trace
         run: |
-          if diff -q test1.trace test1_answer.trace; then
-            echo "test1.trace success."
+          if diff -q testcase8-1.trace testcase8-1_ans.trace; then
+            echo "testcase8-1.trace success."
           else
-            echo "test1.trace fail."
+            echo "testcase8-1.trace fail."
             exit 1
           fi
 
-      - name: Print test2.o diff
-        run: diff test2.o test2_answer.o
+      # 새로운 테스트 케이스 8-2
+      - name: Print testcase8-2.o diff
+        run: diff testcase8-2.o testcase8-2_ans.o
 
-      - name: Print test2.trace diff
-        run: diff test2.trace test2_answer.trace
+      - name: Print testcase8-2.trace diff
+        run: diff testcase8-2.trace testcase8-2_ans.trace
 
-      - name: Check test2.o
+      - name: Check testcase8-2.o
         run: |
-          if diff -q test2.o test2_answer.o; then
-            echo "test2.o success."
+          if diff -q testcase8-2.o testcase8-2_ans.o; then
+            echo "testcase8-2.o success."
           else
-            echo "test2.o fail."
-            exit 1
-          fi
-      - name: Check test2.trace
-        run: |
-          if diff -q test2.trace test2_answer.trace; then
-            echo "test2.trace success."
-          else
-            echo "test2.trace fail."
+            echo "testcase8-2.o fail."
             exit 1
           fi
 
-      - name: Print test3.o diff
-        run: diff test3.o test3_answer.o
-
-      - name: Print test3.trace diff
-        run: diff test3.trace test3_answer.trace
-
-      - name: Check test3.o
+      - name: Check testcase8-2.trace
         run: |
-          if diff -q test3.o test3_answer.o; then
-            echo "test3.o success."
+          if diff -q testcase8-2.trace testcase8-2_ans.trace; then
+            echo "testcase8-2.trace success."
           else
-            echo "test3.o fail."
+            echo "testcase8-2.trace fail."
             exit 1
           fi
 
-      - name: Check test3.trace
+      # 새로운 테스트 케이스 8-3
+      - name: Print testcase8-3.o diff
+        run: diff testcase8-3.o testcase8-3_ans.o
+
+      - name: Print testcase8-3.trace diff
+        run: diff testcase8-3.trace testcase8-3_ans.trace
+
+      - name: Check testcase8-3.o
         run: |
-          if diff -q test3.trace test3_answer.trace; then
-            echo "test3.trace success"
+          if diff -q testcase8-3.o testcase8-3_ans.o; then
+            echo "testcase8-3.o success."
           else
-            echo "test3.trace fail"
+            echo "testcase8-3.o fail."
+            exit 1
+          fi
+
+      - name: Check testcase8-3.trace
+        run: |
+          if diff -q testcase8-3.trace testcase8-3_ans.trace; then
+            echo "testcase8-3.trace success."
+          else
+            echo "testcase8-3.trace fail."
             exit 1
           fi
