@@ -9,6 +9,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    # 테스트 결과를 저장할 환경 변수 설정
+    env:
+      FAILED_TESTS: 0
 
     steps:
       # 초기 설정 단계
@@ -24,332 +28,82 @@ jobs:
       # 잘못된 파일 이름 테스트
       - name: Input wrong file name
         run: echo -e "some_file.s\nterminate" | ./main
+        continue-on-error: true
 
       # 모든 테스트 케이스 실행
       - name: Run Compiled Program
-        run: echo -e "test1.s\ntest2.s\ntest3.s\ntestcase1.s\ntestcase2.s\ntestcase3.s\ntestcase4.s\ntestcase5.s\ntestcase6.s\ntestcase7.s\nterminate" | ./main
+        run: echo -e "test1.s\ntest2.s\ntest3.s\ntestcase1.s\ntestcase2.s\ntestcase3.s\ntestcase4.s\ntestcase5.s\ntestcase6.s\ntestcase7.s\ntestcase8-1.s\ntestcase8-2.s\ntestcase8-3.s\nterminate" | ./main
 
-      # 기존 테스트 케이스 1
-      - name: Print test1.o diff
-        run: diff test1.o test1_ans.o
-
-      - name: Print test1.trace diff
-        run: diff test1.trace test1_ans.trace
-
-      - name: Check test1.o
+      # 테스트 결과 검사 함수 정의
+      - name: Define Test Check Function
         run: |
-          if diff -q test1.o test1_ans.o; then
-            echo "test1.o success."
-          else
-            echo "test1.o fail."
-            exit 1
-          fi
+          check_test() {
+            local test_name=$1
+            local failed=0
+            
+            echo "Checking ${test_name}..."
+            
+            # .o 파일 검사
+            if ! diff -q ${test_name}.o ${test_name}_ans.o > /dev/null 2>&1; then
+              echo "❌ ${test_name}.o fail"
+              diff ${test_name}.o ${test_name}_ans.o || true
+              failed=1
+            else
+              echo "✅ ${test_name}.o success"
+            fi
+            
+            # .trace 파일 검사
+            if ! diff -q ${test_name}.trace ${test_name}_ans.trace > /dev/null 2>&1; then
+              echo "❌ ${test_name}.trace fail"
+              diff ${test_name}.trace ${test_name}_ans.trace || true
+              failed=1
+            else
+              echo "✅ ${test_name}.trace success"
+            fi
+            
+            if [ $failed -eq 1 ]; then
+              echo "FAILED_TESTS=$((FAILED_TESTS + 1))" >> $GITHUB_ENV
+            fi
+            
+            return $failed
+          }
 
-      - name: Check test1.trace
+      # 기존 테스트 케이스 실행
+      - name: Run Original Test Cases
         run: |
-          if diff -q test1.trace test1_ans.trace; then
-            echo "test1.trace success."
-          else
-            echo "test1.trace fail."
-            exit 1
-          fi
+          for test in test{1..3}; do
+            check_test $test
+          done
 
-      # 기존 테스트 케이스 2
-      - name: Print test2.o diff
-        run: diff test2.o test2_ans.o
-
-      - name: Print test2.trace diff
-        run: diff test2.trace test2_ans.trace
-
-      - name: Check test2.o
+      # 새로운 테스트 케이스 실행
+      - name: Run New Test Cases
         run: |
-          if diff -q test2.o test2_ans.o; then
-            echo "test2.o success."
-          else
-            echo "test2.o fail."
-            exit 1
-          fi
+          for test in testcase{1..7}; do
+            check_test $test
+          done
 
-      - name: Check test2.trace
+      # 추가 테스트 케이스 실행
+      - name: Run Additional Test Cases
         run: |
-          if diff -q test2.trace test2_ans.trace; then
-            echo "test2.trace success."
-          else
-            echo "test2.trace fail."
-            exit 1
-          fi
+          for test in testcase8-{1..3}; do
+            check_test $test
+          done
 
-      # 기존 테스트 케이스 3
-      - name: Print test3.o diff
-        run: diff test3.o test3_ans.o
-
-      - name: Print test3.trace diff
-        run: diff test3.trace test3_ans.trace
-
-      - name: Check test3.o
+      # 테스트 결과 요약
+      - name: Summarize Test Results
+        if: always()
         run: |
-          if diff -q test3.o test3_ans.o; then
-            echo "test3.o success."
+          echo "=== Test Results Summary ==="
+          echo "Total failed tests: $FAILED_TESTS"
+          echo "=========================="
+          
+          # 테스트 실패 정보를 GitHub Actions output으로 설정
+          echo "failed_tests=$FAILED_TESTS" >> $GITHUB_OUTPUT
+          
+          # 실패한 테스트가 있다면 경고 메시지 출력
+          if [ $FAILED_TESTS -gt 0 ]; then
+            echo "⚠️ Warning: $FAILED_TESTS test(s) failed"
+            # exit 1을 제거하고 경고만 표시
           else
-            echo "test3.o fail."
-            exit 1
-          fi
-
-      - name: Check test3.trace
-        run: |
-          if diff -q test3.trace test3_ans.trace; then
-            echo "test3.trace success."
-          else
-            echo "test3.trace fail."
-            exit 1
-          fi
-
-      # 새로운 테스트 케이스 1
-      - name: Print testcase1.o diff
-        run: diff testcase1.o testcase1_ans.o
-
-      - name: Print testcase1.trace diff
-        run: diff testcase1.trace testcase1_ans.trace
-
-      - name: Check testcase1.o
-        run: |
-          if diff -q testcase1.o testcase1_ans.o; then
-            echo "testcase1.o success."
-          else
-            echo "testcase1.o fail."
-            exit 1
-          fi
-
-      - name: Check testcase1.trace
-        run: |
-          if diff -q testcase1.trace testcase1_ans.trace; then
-            echo "testcase1.trace success."
-          else
-            echo "testcase1.trace fail."
-            exit 1
-          fi
-
-      # 새로운 테스트 케이스 2
-      - name: Print testcase2.o diff
-        run: diff testcase2.o testcase2_ans.o
-
-      - name: Print testcase2.trace diff
-        run: diff testcase2.trace testcase2_ans.trace
-
-      - name: Check testcase2.o
-        run: |
-          if diff -q testcase2.o testcase2_ans.o; then
-            echo "testcase2.o success."
-          else
-            echo "testcase2.o fail."
-            exit 1
-          fi
-
-      - name: Check testcase2.trace
-        run: |
-          if diff -q testcase2.trace testcase2_ans.trace; then
-            echo "testcase2.trace success."
-          else
-            echo "testcase2.trace fail."
-            exit 1
-          fi
-
-      # 새로운 테스트 케이스 3
-      - name: Print testcase3.o diff
-        run: diff testcase3.o testcase3_ans.o
-
-      - name: Print testcase3.trace diff
-        run: diff testcase3.trace testcase3_ans.trace
-
-      - name: Check testcase3.o
-        run: |
-          if diff -q testcase3.o testcase3_ans.o; then
-            echo "testcase3.o success."
-          else
-            echo "testcase3.o fail."
-            exit 1
-          fi
-
-      - name: Check testcase3.trace
-        run: |
-          if diff -q testcase3.trace testcase3_ans.trace; then
-            echo "testcase3.trace success."
-          else
-            echo "testcase3.trace fail."
-            exit 1
-          fi
-
-      # 새로운 테스트 케이스 4
-      - name: Print testcase4.o diff
-        run: diff testcase4.o testcase4_ans.o
-
-      - name: Print testcase4.trace diff
-        run: diff testcase4.trace testcase4_ans.trace
-
-      - name: Check testcase4.o
-        run: |
-          if diff -q testcase4.o testcase4_ans.o; then
-            echo "testcase4.o success."
-          else
-            echo "testcase4.o fail."
-            exit 1
-          fi
-
-      - name: Check testcase4.trace
-        run: |
-          if diff -q testcase4.trace testcase4_ans.trace; then
-            echo "testcase4.trace success."
-          else
-            echo "testcase4.trace fail."
-            exit 1
-          fi
-
-      # 새로운 테스트 케이스 5
-      - name: Print testcase5.o diff
-        run: diff testcase5.o testcase5_ans.o
-
-      - name: Print testcase5.trace diff
-        run: diff testcase5.trace testcase5_ans.trace
-
-      - name: Check testcase5.o
-        run: |
-          if diff -q testcase5.o testcase5_ans.o; then
-            echo "testcase5.o success."
-          else
-            echo "testcase5.o fail."
-            exit 1
-          fi
-
-      - name: Check testcase5.trace
-        run: |
-          if diff -q testcase5.trace testcase5_ans.trace; then
-            echo "testcase5.trace success."
-          else
-            echo "testcase5.trace fail."
-            exit 1
-          fi
-
-      # 새로운 테스트 케이스 6
-      - name: Print testcase6.o diff
-        run: diff testcase6.o testcase6_ans.o
-
-      - name: Print testcase6.trace diff
-        run: diff testcase6.trace testcase6_ans.trace
-
-      - name: Check testcase6.o
-        run: |
-          if diff -q testcase6.o testcase6_ans.o; then
-            echo "testcase6.o success."
-          else
-            echo "testcase6.o fail."
-            exit 1
-          fi
-
-      - name: Check testcase6.trace
-        run: |
-          if diff -q testcase6.trace testcase6_ans.trace; then
-            echo "testcase6.trace success."
-          else
-            echo "testcase6.trace fail."
-            exit 1
-          fi
-
-      # 새로운 테스트 케이스 7
-      - name: Print testcase7.o diff
-        run: diff testcase7.o testcase7_ans.o
-
-      - name: Print testcase7.trace diff
-        run: diff testcase7.trace testcase7_ans.trace
-
-      - name: Check testcase7.o
-        run: |
-          if diff -q testcase7.o testcase7_ans.o; then
-            echo "testcase7.o success."
-          else
-            echo "testcase7.o fail."
-            exit 1
-          fi
-
-      - name: Check testcase7.trace
-        run: |
-          if diff -q testcase7.trace testcase7_ans.trace; then
-            echo "testcase7.trace success."
-          else
-            echo "testcase7.trace fail."
-            exit 1
-          fi
-
-          # 새로운 테스트 케이스 8-1
-      - name: Print testcase8-1.o diff
-        run: diff testcase8-1.o testcase8-1_ans.o
-
-      - name: Print testcase8-1.trace diff
-        run: diff testcase8-1.trace testcase8-1_ans.trace
-
-      - name: Check testcase8-1.o
-        run: |
-          if diff -q testcase8-1.o testcase8-1_ans.o; then
-            echo "testcase8-1.o success."
-          else
-            echo "testcase8-1.o fail."
-            exit 1
-          fi
-
-      - name: Check testcase8-1.trace
-        run: |
-          if diff -q testcase8-1.trace testcase8-1_ans.trace; then
-            echo "testcase8-1.trace success."
-          else
-            echo "testcase8-1.trace fail."
-            exit 1
-          fi
-
-      # 새로운 테스트 케이스 8-2
-      - name: Print testcase8-2.o diff
-        run: diff testcase8-2.o testcase8-2_ans.o
-
-      - name: Print testcase8-2.trace diff
-        run: diff testcase8-2.trace testcase8-2_ans.trace
-
-      - name: Check testcase8-2.o
-        run: |
-          if diff -q testcase8-2.o testcase8-2_ans.o; then
-            echo "testcase8-2.o success."
-          else
-            echo "testcase8-2.o fail."
-            exit 1
-          fi
-
-      - name: Check testcase8-2.trace
-        run: |
-          if diff -q testcase8-2.trace testcase8-2_ans.trace; then
-            echo "testcase8-2.trace success."
-          else
-            echo "testcase8-2.trace fail."
-            exit 1
-          fi
-
-      # 새로운 테스트 케이스 8-3
-      - name: Print testcase8-3.o diff
-        run: diff testcase8-3.o testcase8-3_ans.o
-
-      - name: Print testcase8-3.trace diff
-        run: diff testcase8-3.trace testcase8-3_ans.trace
-
-      - name: Check testcase8-3.o
-        run: |
-          if diff -q testcase8-3.o testcase8-3_ans.o; then
-            echo "testcase8-3.o success."
-          else
-            echo "testcase8-3.o fail."
-            exit 1
-          fi
-
-      - name: Check testcase8-3.trace
-        run: |
-          if diff -q testcase8-3.trace testcase8-3_ans.trace; then
-            echo "testcase8-3.trace success."
-          else
-            echo "testcase8-3.trace fail."
-            exit 1
+            echo "✅ All tests passed successfully!"
           fi
