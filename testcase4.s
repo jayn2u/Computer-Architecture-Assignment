@@ -11,15 +11,12 @@ ADD x13, x12, x7
 ADD x14, x13, x9
 ADD x15, x14, x10
 EXIT
-
 FUNC1:
 XORI x16, x9, 5
 JALR x0, 0(x1)
-
 FUNC2:
 AND x17, x10, x5
 JALR x0, 0(x1)
-
 FUNC3:
 ADD x18, x13, x10
 JALR x0, 0(x2)
