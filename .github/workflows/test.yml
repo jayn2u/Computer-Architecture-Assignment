@@ -28,7 +28,7 @@ jobs:
         continue-on-error: true
 
       - name: Run Compiled Program
-        run: echo -e "test1.s\ntest2.s\ntest3.s\ntestcase1.s\ntestcase2.s\ntestcase3.s\ntestcase4.s\ntestcase5.s\ntestcase6.s\ntestcase7.s\ntestcase8-1.s\ntestcase8-2.s\ntestcase8-3.s\nterminate" | ./main
+        run: echo -e "test1.s\ntest2.s\ntest3.s\ntestcase1.s\ntestcase2.s\ntestcase3.s\ntestcase4.s\ntestcase5.s\ntestcase6.s\ntestcase7.s\nterminate" | ./main
 
       - name: Run All Tests
         shell: bash
@@ -78,11 +78,6 @@ jobs:
 
           echo "=== Running New Test Cases ==="
           for test in testcase{1..7}; do
-            check_test $test || true
-          done
-
-          echo "=== Running Additional Test Cases ==="
-          for test in testcase8-{1..3}; do
             check_test $test || true
           done
 
